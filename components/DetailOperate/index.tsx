@@ -1,5 +1,5 @@
-import { Popover } from '../popover';
-import { BookDetailMenu } from '../DetailMenu';
+import { Popover } from '@/components/popover';
+import { BookDetailMenu } from '@/components/DetailMenu';
 
 const MENU_ICON_STYLE = {
   '--ran-icon-font-size': '24px',
