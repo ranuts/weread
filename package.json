@@ -1,7 +1,7 @@
 {
   "name": "read",
   "version": "1.0.0",
-  "description": "",
+  "description": "weread web",
   "main": "index.js",
   "type": "module",
   "scripts": {
