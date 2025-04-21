@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "pre": "sh ./bin/preinstall.sh",
     "dev": "vite --host --force --mode dev",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --outDir dist/server --ssr ./views/server.tsx",
