@@ -1,0 +1,55 @@
+name: CI
+on:
+  pull_request:
+    branches: main
+  push:
+    branches: main
+jobs:
+  lint:
+    if: github.repository == 'ranuts/weread'
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node_version: [20, 22]
+        include:
+          # Active LTS + other OS
+          - os: macos-latest
+            node_version: 22
+          - os: windows-latest
+            node_version: 22
+      fail-fast: false
+    name: "Build&Test: node-${{ matrix.node_version }}, ${{ matrix.os }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          version: 7
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: prepare
+        run: pnpm pre
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: format
+        run: pnpm run format
+
+      - name: Lint
+        run: pnpm run lint
