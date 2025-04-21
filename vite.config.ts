@@ -11,17 +11,6 @@ export default defineConfig({
   base: '/',
   plugins: [
     react(),
-    {
-      name: 'manifest-json-middleware',
-      configureServer(server) {
-        server.middlewares.use((req, res, next) => {
-          if (req.url?.endsWith('manifest.json')) {
-            res.setHeader('Content-Type', 'application/manifest+json');
-          }
-          next();
-        });
-      },
-    },
   ],
   build: {
     target: 'esnext',
