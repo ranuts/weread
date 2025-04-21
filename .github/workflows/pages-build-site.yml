@@ -45,6 +45,6 @@ jobs:
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.RAN_ACTIONS_TOKEN }}
+          github_token: ${{ secrets.WEREAD_DEPLOY_KEY }}
           exclude_assets: ""
           publish_dir: dist
