@@ -5,6 +5,8 @@ npminstall-debug.log
 # common
 .temp
 cache
+gh-pages
+gh-pages.pub
 # mac
 .DS_Store
 # eslint
