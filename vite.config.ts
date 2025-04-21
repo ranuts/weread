@@ -9,9 +9,7 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: '/',
-  plugins: [
-    react(),
-  ],
+  plugins: [react()],
   build: {
     target: 'esnext',
     manifest: true,

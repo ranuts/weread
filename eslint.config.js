@@ -9,15 +9,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: [
-      '**/dist/**',
-      '**/report/**',
-      '**/assets/**',
-      '**/temp/**',
-      '**/public/**',
-      '**/cache/**',
-      '**/*.snap',
-    ],
+    ignores: ['**/dist/**', '**/report/**', '**/assets/**', '**/temp/**', '**/public/**', '**/cache/**', '**/*.snap'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
