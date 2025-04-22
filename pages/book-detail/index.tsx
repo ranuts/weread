@@ -82,10 +82,10 @@ export const BookDetail = (): React.JSX.Element => {
       ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
       document.startViewTransition(() => {
         ref.current?.style.setProperty('view-transition-name', '');
-        window.location.href = ROUTE_PATH.HOME;
+        window.location.href = `${ROUTE_PATH.HOME}`;
       });
     } else {
-      window.location.href = ROUTE_PATH.HOME;
+      window.location.href = `${ROUTE_PATH.HOME}`;
     }
   };
 
@@ -106,7 +106,7 @@ export const BookDetail = (): React.JSX.Element => {
         }
       })
       .catch(() => {
-        window.location.href = ROUTE_PATH.HOME;
+        window.location.href = `${ROUTE_PATH.HOME}`;
       });
   };
 

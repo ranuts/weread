@@ -14,7 +14,7 @@ const { render } = await import('../dist/server/server.js');
 // determine routes to pre-render from src/pages
 const routesToPrerender = fs.readdirSync(toAbsolute('../pages')).map((file) => {
   const name = file.replace(/\.tsx$/, '').toLowerCase();
-  return { name: name === 'home' ? 'index' : name, url: name === 'home' ? '/' : `/${name}` };
+  return { name: name === 'home' ? 'index' : name, url: name === 'home' ? '/weread/' : `/weread/${name}` };
 });
 
 const createClientTemplate = (url) => `import { StaticRouter } from 'react-router-dom';
