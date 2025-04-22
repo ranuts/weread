@@ -1,1 +1,0 @@
-export const SERVICE_WORK_VERSION = '1745248221';
