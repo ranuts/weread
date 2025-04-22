@@ -54,6 +54,7 @@
     "crypto-js": "^4.2.0",
     "jschardet": "^3.1.4",
     "ranui": "^0.1.10-alpha.23",
-    "ranuts": "^0.1.0-alpha.18"
+    "ranuts": "^0.1.0-alpha.18",
+    "lit": "^3.2.1"
   }
 }

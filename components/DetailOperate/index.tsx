@@ -1,4 +1,4 @@
-import { Popover } from '@/components/popover';
+import { Popover } from '@/components/Popover';
 import { BookDetailMenu } from '@/components/DetailMenu';
 
 const MENU_ICON_STYLE = {
