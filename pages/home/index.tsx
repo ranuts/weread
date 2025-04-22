@@ -160,7 +160,7 @@ export const Home = (): React.JSX.Element => {
     const target = e.target as HTMLDivElement;
     const id = target.getAttribute('item-id');
     if (id) {
-      window.location.href = ROUTE_PATH.BOOK_DETAIL + `?id=${id}`;
+      window.location.href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
     }
   };
 

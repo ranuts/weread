@@ -31,10 +31,10 @@ export const BookCard = ({ book }: BookCardProps): React.JSX.Element => {
       ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
       document.startViewTransition(() => {
         ref.current?.style.setProperty('view-transition-name', '');
-        window.location.href = ROUTE_PATH.BOOK_DETAIL + `?id=${id}`;
+        window.location.href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
       });
     } else {
-      window.location.href = ROUTE_PATH.BOOK_DETAIL + `?id=${id}`;
+      window.location.href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
     }
   };
 
@@ -46,7 +46,7 @@ export const BookCard = ({ book }: BookCardProps): React.JSX.Element => {
     <a
       ref={ref}
       onClick={toDetail}
-      href={`/book-detail?id=${id}`}
+      href={`/weread/book-detail?id=${id}`}
       style={{
         viewTransitionName: `book-info-${id}`,
       }}
