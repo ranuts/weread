@@ -105,7 +105,8 @@ export const BookDetail = (): React.JSX.Element => {
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
       })
-      .catch(() => {
+      .catch((error) => {
+        console.log('error', error);
         window.location.href = `${ROUTE_PATH.HOME}`;
       });
   };
