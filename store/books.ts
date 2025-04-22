@@ -61,14 +61,15 @@ const createDBWorker = () => {
 const performWorkerOperation = <T = unknown>(type: string, data: any = {}): Promise<IDBResult<T>> => {
   return new Promise((resolve) => {
     if (!db.database) {
-      resolve({
-        status: 'error',
-        code: 1,
-        data: undefined as T,
-        error: true,
-        message: 'Database not initialized',
-      });
-      return;
+      return resolve(performWorkerOperation(type, data));
+      // resolve({
+      //   status: 'error',
+      //   code: 1,
+      //   data: undefined as T,
+      //   error: true,
+      //   message: 'Database not initialized',
+      // });
+      // return performWorkerOperation(type, data);
     }
 
     const worker = createDBWorker();
