@@ -93,7 +93,7 @@ hydrateRoot(
     // 读取 dist/${name}/assets 目录下的所有文件的名称
     const assets = fs.readdirSync(toAbsolute(`../dist/assets`));
     // 将所有名称拼接成一个数组字符串，输出
-    const assetsString = assets.map((asset) => `"/assets/${asset}"`).join(',');
+    const assetsString = assets.map((asset) => `"/weread/assets/${asset}"`).join(',');
     // 写入到 sw.js 文件开头
     const swContent = fs.readFileSync(toAbsolute(`../dist/sw.js`), 'utf-8');
     const newSwContent = 'const SERVICE_WORK_CACHE_FILE_PATHS = [' + assetsString + '];' + swContent;
