@@ -7,8 +7,8 @@ export enum DEVICE_ENUM {
 }
 // 检测当前设备
 export const useCheckDevice = (): [DEVICE_ENUM] => {
+    
   const [currentDevice, setCurrentDevice] = useState<DEVICE_ENUM>(DEVICE_ENUM.UNKNOWN);
-
   const checkDevice = () => {
     // 使用 matchMedia 检查是否是移动设备
     const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;

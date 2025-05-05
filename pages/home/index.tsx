@@ -7,11 +7,11 @@ import { resumeDB } from '@/store';
 import { BOOKS_ADD_BY_DEFAULT, ensampleConfigs } from '@/lib/ensample';
 import type { EnBook } from '@/lib/ensample';
 import type { BookInfo, SearchResult } from '@/store/books';
-import 'ranui/input';
-import 'ranui/icon';
 import { ROUTE_PATH } from '@/router';
 import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
 import { Loading } from '@/components/Loading';
+import 'ranui/input';
+import 'ranui/icon';
 
 const DESKTOP_INPUT_STYLE = {
   '--ran-input-border-radius': '2rem',
@@ -39,25 +39,8 @@ const DESKTOP_ICON_STYLE = {
   '--ran-icon-font-size': '120px',
 };
 
-export const Home = (): React.JSX.Element => {
-  const [currentDevice] = useCheckDevice();
-  if (currentDevice === DEVICE_ENUM.MOBILE) return <MobileHome />;
-  if (currentDevice === DEVICE_ENUM.DESKTOP) return <DesktopHome />;
-  return <Loading />;
-};
-
-export const DesktopHome = (): React.JSX.Element => {
-  const [bookList, setBookList] = useState<BookInfo[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [searchValue, setSearchValue] = useState<string>('');
-  const searchResultRef = useRef<HTMLDivElement>(null);
-  const [searchTitleResult, setSearchTitleResult] = useState<BookInfo[]>([]);
-  const [searchLoading, setSearchLoading] = useState<boolean>(false);
-  // const navigate = useNavigate();
-  const [searchAuthorResult, setSearchAuthorResult] = useState<BookInfo[]>([]);
-  const [searchContentResult, setSearchContentResult] = useState<SearchResult[]>([]);
-
-  const add = () => {
+const addBookByFile = () => {
+  return new Promise((resolve, reject) => {
     const uploadFile = document.createElement('input');
     uploadFile.setAttribute('type', 'file');
     uploadFile.click();
@@ -72,32 +55,70 @@ export const DesktopHome = (): React.JSX.Element => {
             content: result,
           }).then((res) => {
             if (!res.error) {
-              bookList.push(res.data as BookInfo);
-              setBookList([...bookList]);
+              resolve(res.data as BookInfo);
+            } else {
+              reject(res.error);
             }
           });
         });
       }
-    };
+    }
+  });
+};
+
+const addBookByUrl = ({ url, title, image, author }: EnBook) => {
+  return new Promise((resolve, reject) => {
+    fetch(url).then((response) => {
+      response.blob().then((blob) => {
+        const file = new File([blob], title, { type: blob.type });
+        createReader(file).then((result) => {
+          addBook({
+            title: file.name,
+            encoding: checkEncoding(new Uint8Array(result)),
+            content: result,
+            image,
+            author,
+          }).then((res) => {
+            if (!res.error) {
+              resolve(res.data as BookInfo);
+            } else {
+              reject(res.error);
+            }
+          });
+        });
+      });
+    });
+  });
+};
+
+export const Home = (): React.JSX.Element => {
+  const [currentDevice] = useCheckDevice();
+  if (currentDevice === DEVICE_ENUM.MOBILE) return <MobileHome />;
+  if (currentDevice === DEVICE_ENUM.DESKTOP) return <DesktopHome />;
+  return <Loading />;
+};
+
+export const DesktopHome = (): React.JSX.Element => {
+  const [bookList, setBookList] = useState<BookInfo[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [searchValue, setSearchValue] = useState<string>('');
+  const searchResultRef = useRef<HTMLDivElement>(null);
+  const [searchTitleResult, setSearchTitleResult] = useState<BookInfo[]>([]);
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchAuthorResult, setSearchAuthorResult] = useState<BookInfo[]>([]);
+  const [searchContentResult, setSearchContentResult] = useState<SearchResult[]>([]);
+
+  const add = () => {
+    addBookByFile().then((res) => {
+      bookList.push(res as BookInfo);
+      setBookList([...bookList]);
+    });
   };
 
   const addFromUrl = async ({ url, title, image, author }: EnBook) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const file = new File([blob], title, { type: blob.type });
-    createReader(file).then((result) => {
-      addBook({
-        title: file.name,
-        encoding: checkEncoding(new Uint8Array(result)),
-        content: result,
-        image,
-        author,
-      }).then((res) => {
-        if (!res.error) {
-          bookList.push(res.data as BookInfo);
-          setBookList([...bookList]);
-        }
-      });
+    addBookByUrl({ url, title, image, author }).then((res) => {
+      bookList.push(res as BookInfo);
+      setBookList([...bookList]);
     });
   };
 
@@ -164,7 +185,7 @@ export const DesktopHome = (): React.JSX.Element => {
     });
   }, 500);
 
-  const onClickSearchResult = (e: Event) => {
+  const handleNativeClick = (e: MouseEvent) => {
     const target = e.target as HTMLDivElement;
     const id = target.getAttribute('item-id');
     if (id) {
@@ -184,10 +205,10 @@ export const DesktopHome = (): React.JSX.Element => {
     getBooks();
     // 监听搜索框的 change 事件
     inputRef.current?.addEventListener('change', onChange);
-    searchResultRef.current?.addEventListener('click', onClickSearchResult);
+    searchResultRef.current?.addEventListener('click', handleNativeClick);
     return () => {
       inputRef.current?.removeEventListener('change', onChange);
-      searchResultRef.current?.removeEventListener('click', onClickSearchResult);
+      searchResultRef.current?.removeEventListener('click', handleNativeClick);
     };
   }, []);
 
@@ -375,46 +396,16 @@ export const MobileHome = (): React.JSX.Element => {
   const [searchContentResult, setSearchContentResult] = useState<SearchResult[]>([]);
 
   const add = () => {
-    const uploadFile = document.createElement('input');
-    uploadFile.setAttribute('type', 'file');
-    uploadFile.click();
-    uploadFile.onchange = () => {
-      const { files = [] } = uploadFile;
-      if (files && files?.length > 0) {
-        const [file] = files;
-        createReader(file).then((result) => {
-          addBook({
-            title: file.name,
-            encoding: checkEncoding(new Uint8Array(result)),
-            content: result,
-          }).then((res) => {
-            if (!res.error) {
-              bookList.push(res.data as BookInfo);
-              setBookList([...bookList]);
-            }
-          });
-        });
-      }
-    };
+    addBookByFile().then((res) => {
+      bookList.push(res as BookInfo);
+      setBookList([...bookList]);
+    });
   };
 
   const addFromUrl = async ({ url, title, image, author }: EnBook) => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    const file = new File([blob], title, { type: blob.type });
-    createReader(file).then((result) => {
-      addBook({
-        title: file.name,
-        encoding: checkEncoding(new Uint8Array(result)),
-        content: result,
-        image,
-        author,
-      }).then((res) => {
-        if (!res.error) {
-          bookList.push(res.data as BookInfo);
-          setBookList([...bookList]);
-        }
-      });
+    addBookByUrl({ url, title, image, author }).then((res) => {
+      bookList.push(res as BookInfo);
+      setBookList([...bookList]);
     });
   };
 
@@ -481,7 +472,15 @@ export const MobileHome = (): React.JSX.Element => {
     });
   }, 500);
 
-  const onClickSearchResult = (e: Event) => {
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    const id = target.getAttribute('item-id');
+    if (id) {
+      window.location.href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
+    }
+  };
+
+  const handleNativeClick = (e: MouseEvent) => {
     const target = e.target as HTMLDivElement;
     const id = target.getAttribute('item-id');
     if (id) {
@@ -501,10 +500,10 @@ export const MobileHome = (): React.JSX.Element => {
     getBooks();
     // 监听搜索框的 change 事件
     inputRef.current?.addEventListener('change', onChange);
-    searchResultRef.current?.addEventListener('click', onClickSearchResult);
+    searchResultRef.current?.addEventListener('click', handleNativeClick);
     return () => {
       inputRef.current?.removeEventListener('change', onChange);
-      searchResultRef.current?.removeEventListener('click', onClickSearchResult);
+      searchResultRef.current?.removeEventListener('click', handleNativeClick);
     };
   }, []);
 
@@ -524,6 +523,7 @@ export const MobileHome = (): React.JSX.Element => {
           className="w-full transition-all duration-500 overflow-hidden pb-6"
           style={{ height: searchValue ? 'calc(100vh - var(--spacing) * 48)' : '0px' }}
           ref={searchResultRef}
+          onClick={handleClick}
         >
           <div className="overflow-y-auto h-full px-5">
             {searchTitleResult.length > 0 && !searchLoading && (
