@@ -580,27 +580,6 @@
     "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
     "/weread/assets/theWealthOfNations-stswNDIh.txt"
   ],
-  "components/Catalogue/index.tsx": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
-  "components/DetailMenu/index.tsx": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
-  "components/DetailOperate/index.tsx": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
   "components/Loading/index.tsx": [
     "/weread/assets/princekin-DlE6LWWh.txt",
     "/weread/assets/image-DVDFYf-y.png",
@@ -608,21 +587,7 @@
     "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
     "/weread/assets/theWealthOfNations-stswNDIh.txt"
   ],
-  "components/Popover/index.tsx": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
   "lib/ensample.ts": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
-  "lib/enums.ts": [
     "/weread/assets/princekin-DlE6LWWh.txt",
     "/weread/assets/image-DVDFYf-y.png",
     "/weread/assets/camelXiangzi-DLLHgzrf.txt",
@@ -650,7 +615,7 @@
     "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
     "/weread/assets/theWealthOfNations-stswNDIh.txt"
   ],
-  "node_modules/.pnpm/@khmyznikov+pwa-install@0.5.4_lit@3.3.0/node_modules/@khmyznikov/pwa-install/dist/pwa-install.es.js": [
+  "node_modules/.pnpm/@khmyznikov+pwa-install@0.5.5_lit@3.3.0/node_modules/@khmyznikov/pwa-install/dist/pwa-install.es.js": [
     "/weread/assets/princekin-DlE6LWWh.txt",
     "/weread/assets/image-DVDFYf-y.png",
     "/weread/assets/camelXiangzi-DLLHgzrf.txt",
@@ -1427,13 +1392,6 @@
   "node_modules/.pnpm/ranui@0.1.10-alpha.23/node_modules/ranui/dist/without-content-CdJw7vHM.js": [
     "/weread/assets/without-content-CdJw7vHM-CYK1qjz_.js"
   ],
-  "node_modules/.pnpm/ranuts@0.1.0-alpha.18/node_modules/ranuts/dist/mimeType-BEdNg_IR.js": [
-    "/weread/assets/princekin-DlE6LWWh.txt",
-    "/weread/assets/image-DVDFYf-y.png",
-    "/weread/assets/camelXiangzi-DLLHgzrf.txt",
-    "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
-    "/weread/assets/theWealthOfNations-stswNDIh.txt"
-  ],
   "node_modules/.pnpm/ranuts@0.1.0-alpha.18/node_modules/ranuts/dist/src/utils/index.js": [
     "/weread/assets/princekin-DlE6LWWh.txt",
     "/weread/assets/image-DVDFYf-y.png",
@@ -1469,7 +1427,7 @@
     "/weread/assets/theThreeKingdoms-DqSSm1cD.txt",
     "/weread/assets/theWealthOfNations-stswNDIh.txt"
   ],
-  "node_modules/.pnpm/react-router@7.5.1_j6k6oay3ugsr56slyfvma2drry/node_modules/react-router/dist/development/chunk-LSOULM7L.mjs": [
+  "node_modules/.pnpm/react-router@7.5.3_j6k6oay3ugsr56slyfvma2drry/node_modules/react-router/dist/development/chunk-AYJ5UCUI.mjs": [
     "/weread/assets/princekin-DlE6LWWh.txt",
     "/weread/assets/image-DVDFYf-y.png",
     "/weread/assets/camelXiangzi-DLLHgzrf.txt",
