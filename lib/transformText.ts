@@ -97,6 +97,19 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
   const total = text.length;
   if (container) {
     const { clientHeight, clientWidth } = container;
+    if (clientHeight < 30 || clientWidth < 30) {
+      return {
+        program: [],
+        total,
+        totalLine: 0,
+        fontSize: 0,
+        lineHeight: 0,
+        letterSpacing: 0,
+        charWidth: 0,
+        charsPerLine: 0,
+        pageTotalChar: 0,
+      };
+    }
     // 字体大小，字体行高，字体间距，字体宽度
     const rootFontSize = 16;
     const fontSize = 1.125 * rootFontSize; // 字体大小 text-lg
@@ -311,6 +324,16 @@ export const transformTextToExpectedFormat = (
     const section = text.slice(start, end);
     sections.push({ title, section });
   });
+  if (container.clientWidth < 30 || container.clientHeight < 30) {
+    return {
+      sequences: [],
+      totalPage: 0,
+      pageText: [],
+      pageTitleId: [],
+      titleIdTitle: [],
+      titleIdPage: {},
+    };
+  }
   // 4. 把章节按页划分
   const sequences: Sequence[] = [];
   sections.forEach((item, index) => {
