@@ -143,7 +143,7 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
     const findNextWordEnd = (start: number): number => {
       let pos = start;
       let lastWordEnd = start;
-      
+
       while (pos < total) {
         const char = text[pos];
         if (isWordPart(char)) {
@@ -164,7 +164,7 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
     const findWordStart = (end: number): number => {
       let pos = end;
       let lastWordStart = end;
-      
+
       while (pos > 0) {
         const char = text[pos - 1];
         if (isWordPart(char)) {
@@ -189,7 +189,7 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
 
       while (currentLine < totalLine && currentChart < pageTotalChar && useChar < total) {
         const char = text[useChar];
-        
+
         if (char === '\n' || char === '\r') {
           currentLine++;
           currentChart = 0;
@@ -201,7 +201,7 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
 
         // 检查当前字符是否是单词的一部分
         const isWordPartChar = isWordPart(char);
-        
+
         // 如果当前行已满
         if (currentChart >= charsPerLine) {
           // 如果当前正在处理一个单词

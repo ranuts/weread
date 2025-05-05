@@ -110,7 +110,11 @@ export const DesktopBookDetail = (): React.JSX.Element => {
         } else {
           setCurrentBookDetail(res.data);
           const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({ content, title, container: showContainerRef.current! });
+          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
+            content,
+            title,
+            container: showContainerRef.current!,
+          });
           setTextSyntaxTree(textSyntaxTree);
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
@@ -233,7 +237,11 @@ export const MobileBookDetail = (): React.JSX.Element => {
         } else {
           setCurrentBookDetail(res.data);
           const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({ content, title, container: showContainerRef.current! });
+          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
+            content,
+            title,
+            container: showContainerRef.current!,
+          });
           setTextSyntaxTree(textSyntaxTree);
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
