@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { BookInfo } from '@/store/books';
 import './index.scss';
 import { setCurrentBookDetail, setPageNum, setTextSyntaxTree } from '@/lib/subscribe';
@@ -8,8 +8,27 @@ interface BookCardProps {
   book: BookInfo;
 }
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
+      setIsMobile(isMobileDevice);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
 export const BookCard = ({ book }: BookCardProps): React.JSX.Element => {
-  return <MobileBookCard book={book} />;
+  const isMobile = useIsMobile();
+  
+  return isMobile ? <MobileBookCard book={book} /> : <DesktopBookCard book={book} />;
 };
 
 export const DesktopBookCard = ({ book }: BookCardProps): React.JSX.Element => {

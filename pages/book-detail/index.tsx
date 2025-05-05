@@ -54,8 +54,27 @@ const next = (num: number = 1) => {
   }
 };
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
+      setIsMobile(isMobileDevice);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+
+  return isMobile;
+};
+
 export const BookDetail = (): React.JSX.Element => {
-  return <MobileBookDetail />;
+  const isMobile = useIsMobile();
+  
+  return isMobile ? <MobileBookDetail /> : <DesktopBookDetail />;
 };
 
 export const DesktopBookDetail = (): React.JSX.Element => {
