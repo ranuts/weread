@@ -34,7 +34,7 @@ export const addBook = (data: {
 }): Promise<IDBResult<BookInfo>> => {
   const { title = '', author = '', image = '', content, encoding = '' } = data;
   const hash = CryptoJS.MD5(typeof content === 'string' ? content : CryptoJS.lib.WordArray.create(content)).toString();
-  
+
   // 先检查是否已存在相同 hash 的书籍
   return getBookById<BookInfo>(hash).then((res) => {
     if (!res.error && res.data) {
@@ -47,7 +47,7 @@ export const addBook = (data: {
         message: 'Book already exists',
       };
     }
-    
+
     // 如果书籍不存在，则添加新书
     const createTime = Date.now();
     const bookInfo: BookInfo = {
@@ -91,7 +91,7 @@ const performWorkerOperation = <T = unknown>(type: string, data: any = {}): Prom
 
     const worker = createDBWorker();
     const operationId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-    
+
     const messageHandler = (e: MessageEvent) => {
       if (e.data.operationId === operationId) {
         worker.removeEventListener('message', messageHandler);

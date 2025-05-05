@@ -27,7 +27,7 @@ const useIsMobile = () => {
 
 export const BookCard = ({ book }: BookCardProps): React.JSX.Element => {
   const isMobile = useIsMobile();
-  
+
   return isMobile ? <MobileBookCard book={book} /> : <DesktopBookCard book={book} />;
 };
 

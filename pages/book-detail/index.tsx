@@ -6,7 +6,7 @@ import { transformTextToExpectedFormat } from '@/lib/transformText';
 import type { BookInfo } from '@/store/books';
 import type { TextSyntaxTree } from '@/lib/transformText';
 import { ROUTE_PATH } from '@/router';
-import { BookDetailOperate } from '@/components/DetailOperate';
+import { BookDetailOperate, MobileBookDetailOperate } from '@/components/DetailOperate';
 import {
   EVENT_NAME,
   getCurrentBookDetail,
@@ -21,6 +21,8 @@ import { resumeDB } from '@/store';
 import 'ranui/icon';
 import 'ranui/input';
 import './index.scss';
+import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
+import { Loading } from '@/components/Loading';
 
 const DESKTOP_ICON_STYLE = {
   '--ran-icon-font-size': '14px',
@@ -54,27 +56,11 @@ const next = (num: number = 1) => {
   }
 };
 
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
-      setIsMobile(isMobileDevice);
-    };
-
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
-
-  return isMobile;
-};
-
 export const BookDetail = (): React.JSX.Element => {
-  const isMobile = useIsMobile();
-
-  return isMobile ? <MobileBookDetail /> : <DesktopBookDetail />;
+  const [currentDevice] = useCheckDevice();
+  if (currentDevice === DEVICE_ENUM.MOBILE) return <MobileBookDetail />;
+  if (currentDevice === DEVICE_ENUM.DESKTOP) return <DesktopBookDetail />;
+  return <Loading />;
 };
 
 export const DesktopBookDetail = (): React.JSX.Element => {
@@ -213,13 +199,20 @@ export const DesktopBookDetail = (): React.JSX.Element => {
   );
 };
 
+const MOBILE_ICON_STYLE = {
+  '--ran-icon-font-size': '36px',
+  '--ran-icon-color': 'var(--icon-color-1)',
+};
+
 export const MobileBookDetail = (): React.JSX.Element => {
   const showContainerRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
   const touchMoveRef = useRef<number>(0);
-  const textSyntaxTree: TextSyntaxTree = getTextSyntaxTree();
-  const pageNum: number = getPageNum();
   const [_, update] = useState(0);
+  const [isTouch, setIsTouch] = useState(false);
+  const textSyntaxTree: TextSyntaxTree = getTextSyntaxTree();
+  const totalPage: number = textSyntaxTree.totalPage;
+  const pageNum: number = getPageNum();
   const { id } = getQuery();
 
   const updateUI = () => {
@@ -274,11 +267,19 @@ export const MobileBookDetail = (): React.JSX.Element => {
     const { clientX } = e;
     const clientWidth = showContainerRef.current?.clientWidth || 0;
     if (!clientWidth) return;
-    if (clientX < clientWidth / 3) {
+    if (clientX < clientWidth / 4) {
       pre();
-    } else if (clientX > (clientWidth / 3) * 2) {
+      setIsTouch(false);
+    } else if (clientX > (clientWidth / 4) * 3) {
       next();
+      setIsTouch(false);
+    } else {
+      setIsTouch(!isTouch);
     }
+  };
+
+  const back = () => {
+    window.history.back();
   };
 
   useEffect(() => {
@@ -307,8 +308,15 @@ export const MobileBookDetail = (): React.JSX.Element => {
           viewTransitionName: `book-info-${id}`,
         }}
       >
-        <div></div>
-        <div className='w-full h-full p-8'>
+        <div className="w-full h-full p-8 relative">
+          <div
+            className="absolute top-0 left-0 transition-all w-full flex items-center justify-between px-4 bg-front-bg-color-3 overflow-hidden"
+            style={{
+              height: isTouch ? 'calc(var(--spacing) * 14)' : '0px',
+            }}
+          >
+            <r-icon name="more" className="cursor-pointer rotate-90" style={MOBILE_ICON_STYLE} onClick={back}></r-icon>
+          </div>
           <div
             className="w-full h-full text-text-color-1 text-lg leading-10 whitespace-pre-wrap"
             onTouchStart={touchStart}
@@ -318,8 +326,18 @@ export const MobileBookDetail = (): React.JSX.Element => {
           >
             {textSyntaxTree.pageText[pageNum]?.text}
           </div>
+          <div
+            className="absolute bottom-0 left-0 transition-all w-full flex items-center justify-between px-4 bg-front-bg-color-3 overflow-hidden z-20"
+            style={{
+              height: isTouch ? 'calc(var(--spacing) * 14)' : '0px',
+            }}
+          >
+            <MobileBookDetailOperate />
+          </div>
+          <div className="text-right text-text-color-2 text-base absolute bottom-8 right-8 z-10">
+            {pageNum + 1} / {totalPage + 1}
+          </div>
         </div>
-        <div></div>
       </div>
     </div>
   );

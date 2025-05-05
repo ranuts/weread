@@ -10,6 +10,8 @@ import type { BookInfo, SearchResult } from '@/store/books';
 import 'ranui/input';
 import 'ranui/icon';
 import { ROUTE_PATH } from '@/router';
+import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
+import { Loading } from '@/components/Loading';
 
 const DESKTOP_INPUT_STYLE = {
   '--ran-input-border-radius': '2rem',
@@ -37,33 +39,11 @@ const DESKTOP_ICON_STYLE = {
   '--ran-icon-font-size': '120px',
 };
 
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      // 使用 matchMedia 检查是否是移动设备
-      const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
-      setIsMobile(isMobileDevice);
-    };
-
-    // 初始检查
-    checkIsMobile();
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', checkIsMobile);
-
-    // 清理监听器
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
-
-  return isMobile;
-};
-
 export const Home = (): React.JSX.Element => {
-  const isMobile = useIsMobile();
-  
-  return isMobile ? <MobileHome /> : <DesktopHome />;
+  const [currentDevice] = useCheckDevice();
+  if (currentDevice === DEVICE_ENUM.MOBILE) return <MobileHome />;
+  if (currentDevice === DEVICE_ENUM.DESKTOP) return <DesktopHome />;
+  return <Loading />;
 };
 
 export const DesktopHome = (): React.JSX.Element => {

@@ -14,11 +14,13 @@ interface DBStrategy {
 // 定义操作类型
 type OperationType = 'search' | 'add' | 'getAll' | 'get';
 
-
-
 // 搜索策略
 class SearchStrategy implements DBStrategy {
-  execute({ store, data, operationId }: ExecuteOptions<{ keyword: string; searchType: 'title' | 'author' | 'content' }>): void {
+  execute({
+    store,
+    data,
+    operationId,
+  }: ExecuteOptions<{ keyword: string; searchType: 'title' | 'author' | 'content' }>): void {
     const { keyword, searchType } = data;
     const request = store.openCursor();
     const results: any[] = [];
@@ -100,7 +102,7 @@ class AddStrategy implements DBStrategy {
         error: false,
         operationId,
       });
-    }
+    };
     const onerror = () => {
       self.postMessage({
         status: 'error',
@@ -109,7 +111,7 @@ class AddStrategy implements DBStrategy {
         error: true,
         operationId,
       });
-    }
+    };
     request.addEventListener('success', onsuccess);
     request.addEventListener('error', onerror);
   }
