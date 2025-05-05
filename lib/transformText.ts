@@ -324,7 +324,7 @@ export const transformTextToExpectedFormat = (
     const section = text.slice(start, end);
     sections.push({ title, section });
   });
-  if (container.clientWidth < 30 || container.clientHeight < 30) {
+  if (container?.clientWidth < 30 || container?.clientHeight < 30) {
     return {
       sequences: [],
       totalPage: 0,

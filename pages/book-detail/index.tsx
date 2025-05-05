@@ -73,7 +73,7 @@ const useIsMobile = () => {
 
 export const BookDetail = (): React.JSX.Element => {
   const isMobile = useIsMobile();
-  
+
   return isMobile ? <MobileBookDetail /> : <DesktopBookDetail />;
 };
 
@@ -240,7 +240,6 @@ export const MobileBookDetail = (): React.JSX.Element => {
           setCurrentBookDetail(res.data);
           const { content } = res.data;
           const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat(content, showContainerRef.current!);
-          console.log('textSyntaxTree', textSyntaxTree);
           setTextSyntaxTree(textSyntaxTree);
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
@@ -309,14 +308,16 @@ export const MobileBookDetail = (): React.JSX.Element => {
         }}
       >
         <div></div>
-        <div
-          className="w-full h-full p-5 text-text-color-1 text-lg leading-10 whitespace-pre-wrap"
-          onTouchStart={touchStart}
-          onTouchEnd={touchEnd}
-          onClick={click}
-          ref={showContainerRef}
-        >
-          {textSyntaxTree.pageText[pageNum]?.text}
+        <div className='w-full h-full p-8'>
+          <div
+            className="w-full h-full text-text-color-1 text-lg leading-10 whitespace-pre-wrap"
+            onTouchStart={touchStart}
+            onTouchEnd={touchEnd}
+            onClick={click}
+            ref={showContainerRef}
+          >
+            {textSyntaxTree.pageText[pageNum]?.text}
+          </div>
         </div>
         <div></div>
       </div>
