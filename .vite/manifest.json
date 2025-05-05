@@ -1,10 +1,10 @@
 {
   "assets/books/JaneEyre/JaneEyre.txt": {
-    "file": "assets/JaneEyre-DWXWmIOi.txt",
+    "file": "assets/JaneEyre-BMGVb_1K.txt",
     "src": "assets/books/JaneEyre/JaneEyre.txt"
   },
   "assets/books/TheHunchbackofNotre-Dame/TheHunchbackofNotre-Dame.txt": {
-    "file": "assets/TheHunchbackofNotre-Dame-DPYTuda4.txt",
+    "file": "assets/TheHunchbackofNotre-Dame-D4QpIjKy.txt",
     "src": "assets/books/TheHunchbackofNotre-Dame/TheHunchbackofNotre-Dame.txt"
   },
   "assets/books/camelXiangzi/camelXiangzi.txt": {
@@ -204,7 +204,7 @@
     "isDynamicEntry": true
   },
   "views/index.html": {
-    "file": "assets/index-DMFKalf1.js",
+    "file": "assets/index-DEzrDR5H.js",
     "name": "index",
     "src": "views/index.html",
     "isEntry": true,
@@ -248,8 +248,8 @@
       "assets/camelXiangzi-DLLHgzrf.txt",
       "assets/theThreeKingdoms-DqSSm1cD.txt",
       "assets/theWealthOfNations-stswNDIh.txt",
-      "assets/TheHunchbackofNotre-Dame-DPYTuda4.txt",
-      "assets/JaneEyre-DWXWmIOi.txt",
+      "assets/TheHunchbackofNotre-Dame-D4QpIjKy.txt",
+      "assets/JaneEyre-BMGVb_1K.txt",
       "assets/walden-DXZmhaaC.txt",
       "assets/snowWhite-aCCAN2vf.txt"
     ]
