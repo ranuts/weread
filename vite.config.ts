@@ -29,6 +29,7 @@ export default defineConfig({
       '@/types': resolve(__dirname, '/types'),
       '@/styles': resolve(__dirname, '/styles'),
       '@/pages': resolve(__dirname, '/pages'),
+      '@/locales': resolve(__dirname, '/locales'),
     },
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json'],
   },

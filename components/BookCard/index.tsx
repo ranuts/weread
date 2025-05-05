@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { BookInfo } from '@/store/books';
-import './index.scss';
 import { setCurrentBookDetail, setPageNum, setTextSyntaxTree } from '@/lib/subscribe';
 import { ROUTE_PATH } from '@/router';
+import './index.scss';
 
 interface BookCardProps {
   book: BookInfo;

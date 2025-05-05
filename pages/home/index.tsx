@@ -10,6 +10,7 @@ import type { BookInfo, SearchResult } from '@/store/books';
 import { ROUTE_PATH } from '@/router';
 import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
 import { Loading } from '@/components/Loading';
+import { t } from '@/locales';
 import 'ranui/input';
 import 'ranui/icon';
 
@@ -62,7 +63,7 @@ const addBookByFile = () => {
           });
         });
       }
-    }
+    };
   });
 };
 
@@ -220,7 +221,7 @@ export const DesktopHome = (): React.JSX.Element => {
             className="w-1/2 min-w-2xs h-14 block mx-auto"
             icon="search"
             style={DESKTOP_INPUT_STYLE}
-            placeholder="搜索"
+            placeholder={t('search')}
             ref={inputRef}
           ></r-input>
           <div
@@ -232,7 +233,7 @@ export const DesktopHome = (): React.JSX.Element => {
               {searchTitleResult.length > 0 && !searchLoading && (
                 <div className="w-1/2 min-w-2xs block mx-auto bg-front-bg-color-3 rounded-xl py-5 mb-6">
                   <div>
-                    <div className="text-text-color-2 text-base font-medium px-5 pb-1.5">电子书</div>
+                    <div className="text-text-color-2 text-base font-medium px-5 pb-1.5">{t('ebook')}</div>
                     <div>
                       {searchTitleResult.map((book) => {
                         const { title, author, image } = book;
@@ -274,7 +275,8 @@ export const DesktopHome = (): React.JSX.Element => {
                 <div className="w-1/2 min-w-2xs block mx-auto bg-front-bg-color-3 rounded-xl py-5">
                   <div>
                     <div className="text-text-color-2 text-base font-medium px-5 pb-1.5">
-                      全文中提到 <span className="text-blue-500">{searchValue}</span> 的书 ·{' '}
+                      {t('search_result_1')} <span className="text-blue-500">{searchValue}</span> {t('search_result_2')}
+                      {t('search_result_3')}
                       {searchContentResult.length}
                     </div>
                     <div>
@@ -325,7 +327,7 @@ export const DesktopHome = (): React.JSX.Element => {
                   <div className="h-full">
                     <div className="flex flex-col items-center justify-center h-full">
                       <r-icon name="without-content" className="text-text-color-2" style={DESKTOP_ICON_STYLE}></r-icon>
-                      <div className="text-text-color-2 font-normal text-xl">无结果</div>
+                      <div className="text-text-color-2 font-normal text-xl">{t('no_result')}</div>
                     </div>
                   </div>
                 )}
@@ -351,7 +353,7 @@ export const DesktopHome = (): React.JSX.Element => {
         <div className="w-full bg-front-bg-color-1 min-h-svh">
           <div className="max-w-7xl mx-auto pt-12 flex flex-row justify-between items-center">
             <div className="flex justify-start items-center">
-              <div className="cursor-pointer text-text-color-1 text-2xl font-medium">我的书架</div>
+              <div className="cursor-pointer text-text-color-1 text-2xl font-medium">{t('my_bookcase')}</div>
               <r-icon className="-rotate-90 cursor-pointer" name="more" style={DESKTOP_MORE_ICON_STYLE}></r-icon>
             </div>
           </div>
@@ -514,7 +516,7 @@ export const MobileHome = (): React.JSX.Element => {
           className="w-full h-9 block mx-auto"
           icon="search"
           style={MOBILE_INPUT_STYLE}
-          placeholder="搜索"
+          placeholder={t('search')}
           ref={inputRef}
         ></r-input>
       </div>
@@ -529,7 +531,7 @@ export const MobileHome = (): React.JSX.Element => {
             {searchTitleResult.length > 0 && !searchLoading && (
               <div className="block mx-auto bg-front-bg-color-3 rounded-xl mb-6">
                 <div>
-                  <div className="text-text-color-2 text-base font-medium px-5 py-1.5">电子书</div>
+                  <div className="text-text-color-2 text-base font-medium px-5 py-1.5">{t('ebook')}</div>
                   <div>
                     {searchTitleResult.map((book) => {
                       const { title, author, image } = book;
@@ -571,7 +573,8 @@ export const MobileHome = (): React.JSX.Element => {
               <div className="block mx-auto bg-front-bg-color-3 rounded-xl py-5">
                 <div>
                   <div className="text-text-color-2 text-base font-medium px-5 pb-1.5">
-                    全文中提到 <span className="text-blue-500">{searchValue}</span> 的书 · {searchContentResult.length}
+                    {t('search_result_1')} <span className="text-blue-500">{searchValue}</span> {t('search_result_2')} ·{' '}
+                    {searchContentResult.length}
                   </div>
                   <div>
                     {searchContentResult.map((book) => {
@@ -621,7 +624,7 @@ export const MobileHome = (): React.JSX.Element => {
                 <div className="h-full">
                   <div className="flex flex-col items-center justify-center h-full">
                     <r-icon name="without-content" className="text-text-color-2" style={DESKTOP_ICON_STYLE}></r-icon>
-                    <div className="text-text-color-2 font-normal text-xl">无结果</div>
+                    <div className="text-text-color-2 font-normal text-xl">{t('no_result')}</div>
                   </div>
                 </div>
               )}

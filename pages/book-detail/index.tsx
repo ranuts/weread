@@ -18,11 +18,12 @@ import {
   syncHook,
 } from '@/lib/subscribe';
 import { resumeDB } from '@/store';
+import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
+import { Loading } from '@/components/Loading';
+import { t } from '@/locales';
 import 'ranui/icon';
 import 'ranui/input';
 import './index.scss';
-import { DEVICE_ENUM, useCheckDevice } from '@/lib/hooks';
-import { Loading } from '@/components/Loading';
 
 const DESKTOP_ICON_STYLE = {
   '--ran-icon-font-size': '14px',
@@ -108,8 +109,8 @@ export const DesktopBookDetail = (): React.JSX.Element => {
           });
         } else {
           setCurrentBookDetail(res.data);
-          const { content } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat(content, showContainerRef.current!);
+          const { content, title } = res.data;
+          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({ content, title, container: showContainerRef.current! });
           setTextSyntaxTree(textSyntaxTree);
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
@@ -148,7 +149,7 @@ export const DesktopBookDetail = (): React.JSX.Element => {
           </div>
           <div>
             <a className="text-text-color-2 font-normal cursor-pointer hover:text-text-color-1" onClick={toHome}>
-              首页
+              {t('home')}
             </a>
           </div>
         </div>
@@ -180,13 +181,13 @@ export const DesktopBookDetail = (): React.JSX.Element => {
                 onClick={() => pre(2)}
               >
                 <r-icon className="rotate-90 cursor-pointer" name="more" style={DESKTOP_ICON_STYLE}></r-icon>
-                <span>上一页</span>
+                <span>{t('previous_page')}</span>
               </div>
               <div
                 className="text-text-color-2 text-sm font-light border-1 border-border-color-1 pr-2 pl-3 rounded-4xl h-8 flex items-center justify-center cursor-pointer hover:bg-gray-100"
                 onClick={() => next(2)}
               >
-                <span>下一页</span>
+                <span>{t('next_page')}</span>
                 <r-icon className="-rotate-90 cursor-pointer" name="more" style={DESKTOP_ICON_STYLE}></r-icon>
               </div>
             </div>
@@ -231,8 +232,8 @@ export const MobileBookDetail = (): React.JSX.Element => {
           });
         } else {
           setCurrentBookDetail(res.data);
-          const { content } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat(content, showContainerRef.current!);
+          const { content, title } = res.data;
+          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({ content, title, container: showContainerRef.current! });
           setTextSyntaxTree(textSyntaxTree);
           ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
