@@ -24,7 +24,7 @@
 
 website: https://ranuts.github.io/weread/
 
-**This is a learning and exchange program. If you find anything incorrect, please feel free to issue an issue or request a PR. It is not recommended for other uses.**
+**This project is for learning and exchange. Should you find any problems, submit an issue or a PR. It's intended for learning and exchange only; using it for other purposes isn't advised.**
 
 English · [中文](./readme-zh_CN.md)
 
