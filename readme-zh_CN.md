@@ -22,6 +22,8 @@
 </p>
 <br/>
 
+项目网址：https://ranuts.github.io/weread/
+
 **这是一个学习交流项目，如果发现有任何不对的地方，欢迎 issue 和 PR。不建议用作其他用途。**
 
 [English](./readme.md) · 中文

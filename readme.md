@@ -22,6 +22,8 @@
 </p>
 <br/>
 
+website: https://ranuts.github.io/weread/
+
 **This is a learning and exchange program. If you find anything incorrect, please feel free to issue an issue or request a PR. It is not recommended for other uses.**
 
 English · [中文](./readme-zh_CN.md)
