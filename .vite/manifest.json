@@ -1,4 +1,12 @@
 {
+  "assets/books/JaneEyre/JaneEyre.txt": {
+    "file": "assets/JaneEyre-DWXWmIOi.txt",
+    "src": "assets/books/JaneEyre/JaneEyre.txt"
+  },
+  "assets/books/TheHunchbackofNotre-Dame/TheHunchbackofNotre-Dame.txt": {
+    "file": "assets/TheHunchbackofNotre-Dame-DPYTuda4.txt",
+    "src": "assets/books/TheHunchbackofNotre-Dame/TheHunchbackofNotre-Dame.txt"
+  },
   "assets/books/camelXiangzi/camelXiangzi.txt": {
     "file": "assets/camelXiangzi-DLLHgzrf.txt",
     "src": "assets/books/camelXiangzi/camelXiangzi.txt"
@@ -11,6 +19,10 @@
     "file": "assets/princekin-DlE6LWWh.txt",
     "src": "assets/books/princekin/princekin.txt"
   },
+  "assets/books/snowWhite/snowWhite.txt": {
+    "file": "assets/snowWhite-aCCAN2vf.txt",
+    "src": "assets/books/snowWhite/snowWhite.txt"
+  },
   "assets/books/theThreeKingdoms/theThreeKingdoms.txt": {
     "file": "assets/theThreeKingdoms-DqSSm1cD.txt",
     "src": "assets/books/theThreeKingdoms/theThreeKingdoms.txt"
@@ -18,6 +30,10 @@
   "assets/books/theWealthOfNations/theWealthOfNations.txt": {
     "file": "assets/theWealthOfNations-stswNDIh.txt",
     "src": "assets/books/theWealthOfNations/theWealthOfNations.txt"
+  },
+  "assets/books/walden/walden.txt": {
+    "file": "assets/walden-DXZmhaaC.txt",
+    "src": "assets/books/walden/walden.txt"
   },
   "node_modules/.pnpm/ranui@0.1.10-alpha.23/node_modules/ranui/dist/add-user-BN1JlY7e.js": {
     "file": "assets/add-user-BN1JlY7e-D6YNNzf8.js",
@@ -188,7 +204,7 @@
     "isDynamicEntry": true
   },
   "views/index.html": {
-    "file": "assets/index-Crh7YbVn.js",
+    "file": "assets/index-DMFKalf1.js",
     "name": "index",
     "src": "views/index.html",
     "isEntry": true,
@@ -224,14 +240,18 @@
       "node_modules/.pnpm/ranui@0.1.10-alpha.23/node_modules/ranui/dist/without-content-CdJw7vHM.js"
     ],
     "css": [
-      "assets/index-DFnxR9H9.css"
+      "assets/index-3dP5ma-A.css"
     ],
     "assets": [
       "assets/princekin-DlE6LWWh.txt",
       "assets/image-DVDFYf-y.png",
       "assets/camelXiangzi-DLLHgzrf.txt",
       "assets/theThreeKingdoms-DqSSm1cD.txt",
-      "assets/theWealthOfNations-stswNDIh.txt"
+      "assets/theWealthOfNations-stswNDIh.txt",
+      "assets/TheHunchbackofNotre-Dame-DPYTuda4.txt",
+      "assets/JaneEyre-DWXWmIOi.txt",
+      "assets/walden-DXZmhaaC.txt",
+      "assets/snowWhite-aCCAN2vf.txt"
     ]
   }
 }
