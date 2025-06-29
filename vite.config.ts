@@ -10,6 +10,10 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   base: '/weread',
   plugins: [react()],
+  assetsInclude: ["**/*.onnx"],
+  optimizeDeps: {
+    exclude: ["onnxruntime-web"],
+  },
   build: {
     target: 'esnext',
     manifest: true,

@@ -99,30 +99,33 @@ export const DesktopBookDetail = (): React.JSX.Element => {
     }
   };
 
-  const getBookDetailById = (id?: string) => {
+  const getBookDetailById = async (id?: string) => {
     if (!id) return;
-    getBookById<BookInfo>(id)
-      .then((res) => {
-        if (res.error) {
-          resumeDB().then(() => {
-            getBookDetailById(id);
-          });
-        } else {
-          setCurrentBookDetail(res.data);
-          const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
-            content,
-            title,
-            container: showContainerRef.current!,
-          });
-          setTextSyntaxTree(textSyntaxTree);
-          ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
-        }
-      })
-      .catch((error) => {
-        console.log('error', error);
-        window.location.href = `${ROUTE_PATH.HOME}`;
+
+    try {
+      const res = await getBookById<BookInfo>(id);
+
+      if (res.error) {
+        await resumeDB();
+        await getBookDetailById(id);
+        return;
+      }
+
+      setCurrentBookDetail(res.data);
+      const { content, title } = res.data;
+      // 始终使用 AI 处理文本
+      const textSyntaxTree: TextSyntaxTree = await transformTextToExpectedFormat({
+        content,
+        title,
+        container: showContainerRef.current!,
       });
+      console.log('textSyntaxTree', textSyntaxTree);
+      setTextSyntaxTree(textSyntaxTree);
+      ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
+    } catch (error) {
+      console.log('error', error);
+      window.location.href = `${ROUTE_PATH.HOME}`;
+    }
   };
 
   useEffect(() => {
@@ -146,7 +149,7 @@ export const DesktopBookDetail = (): React.JSX.Element => {
     <div className="px-44 bg-front-bg-color-1 h-screen relative">
       <div className="w-full h-full flex flex-col">
         <div className="h-16 flex items-center justify-between flex-row flex-nowrap shrink-0">
-          <div>
+          <div className="flex items-center gap-4">
             <a className="text-text-color-2 font-medium hover:text-text-color-1 cursor-pointer" onClick={toHome}>
               {bookDetail?.title}
             </a>
@@ -226,30 +229,34 @@ export const MobileBookDetail = (): React.JSX.Element => {
     }, 16)();
   };
 
-  const getBookDetailById = (id?: string) => {
+  const getBookDetailById = async (id?: string) => {
     if (!id) return;
-    getBookById<BookInfo>(id)
-      .then((res) => {
-        if (res.error) {
-          resumeDB().then(() => {
-            getBookDetailById(id);
-          });
-        } else {
-          setCurrentBookDetail(res.data);
-          const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
-            content,
-            title,
-            container: showContainerRef.current!,
-          });
-          setTextSyntaxTree(textSyntaxTree);
-          ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
-        }
-      })
-      .catch((error) => {
-        console.log('error', error);
-        window.location.href = `${ROUTE_PATH.HOME}`;
+
+    try {
+      const res = await getBookById<BookInfo>(id);
+
+      if (res.error) {
+        await resumeDB();
+        await getBookDetailById(id);
+        return;
+      }
+
+      setCurrentBookDetail(res.data);
+      const { content, title } = res.data;
+
+      // 始终使用 AI 处理文本
+      const textSyntaxTree: TextSyntaxTree = await transformTextToExpectedFormat({
+        content,
+        title,
+        container: showContainerRef.current!,
       });
+
+      setTextSyntaxTree(textSyntaxTree);
+      ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
+    } catch (error) {
+      console.log('error', error);
+      window.location.href = `${ROUTE_PATH.HOME}`;
+    }
   };
 
   const touchStart = (e: React.TouchEvent<HTMLDivElement>) => {

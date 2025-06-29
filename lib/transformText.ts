@@ -1,4 +1,5 @@
 import jschardet from 'jschardet';
+import { extractChaptersWithAI } from './aiChapterExtractor';
 import { Locales, t } from '@/locales';
 
 export interface TransformText {
@@ -21,6 +22,7 @@ export const transformText = (content: string | ArrayBuffer): TransformText | un
     }
   } else {
     console.error('Unexpected result type:', typeof content);
+    return undefined;
   }
 };
 
@@ -315,6 +317,7 @@ export interface ChapterItem {
   start: number;
   end?: number;
   pageNum?: number;
+  confidence?: number;
 }
 
 export const extractRomanChapters = (text: string): ChapterItem[] => {
@@ -416,7 +419,7 @@ export interface TextSyntaxTree {
 }
 
 // 处理文本成期望的格式：
-export const transformTextToExpectedFormat = ({
+export const transformTextToExpectedFormat = async ({
   content,
   container,
   title,
@@ -424,11 +427,34 @@ export const transformTextToExpectedFormat = ({
   content: ArrayBuffer | Uint8Array<ArrayBuffer>;
   container: HTMLElement;
   title: string;
-}): TextSyntaxTree => {
+}): Promise<TextSyntaxTree> => {
   // 1. 过滤空格换行
   const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
-  // 2. 提取章节标题
-  const extractedChapters = extractCaptionTitleChapters(text);
+
+  // 2. 提取章节标题 - 支持 AI
+  let extractedChapters: ChapterItem[] = [];
+  try {
+    extractedChapters = await extractChaptersWithAI(text, {
+      useLocalModel: true,
+      confidenceThreshold: 0.7,
+      maxChapters: 100,
+      tfjsConfig: {
+        modelPath: '/weread/models/chapter_classifier.json',
+        threshold: 0.7,
+        maxLength: 128,
+        batchSize: 32,
+        vocabSize: 1000,
+      },
+    });
+    console.log(`AI extracted ${extractedChapters.length} chapters`);
+  } catch (error) {
+    console.warn('AI chapter extraction failed, falling back to regex method:', error);
+    extractedChapters = extractCaptionTitleChapters(text);
+  }
+  if (extractedChapters.length === 0) {
+    extractedChapters = extractCaptionTitleChapters(text);
+  }
+
   // 3. 把文本按章节划分
   const sections: Section[] = [];
   extractedChapters.forEach((item, index) => {

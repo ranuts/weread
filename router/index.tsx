@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { Loading } from '@/components/Loading/index';
 import { Home } from '@/pages/home/index';
 import { BookDetail } from '@/pages/book-detail/index';
+import AIModelGenerator from '@/pages/ai-model-generator/index';
 
 export const base = '/weread';
 // export const base = '/packages/read/dist/client'
@@ -11,6 +12,7 @@ export const base = '/weread';
 export enum ROUTE_PATH {
   HOME = `${base}/`,
   BOOK_DETAIL = `${base}/book-detail`,
+  AI_MODEL_GENERATOR = `${base}/ai-model-generator`,
   LOADING = `${base}/loading`,
 }
 
@@ -45,6 +47,10 @@ export const Routes = (): ReactElement | null => {
     {
       path: ROUTE_PATH.BOOK_DETAIL,
       element: <BookDetail />,
+    },
+    {
+      path: ROUTE_PATH.AI_MODEL_GENERATOR,
+      element: <AIModelGenerator />,
     },
     {
       path: ROUTE_PATH.LOADING,

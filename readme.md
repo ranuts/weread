@@ -45,17 +45,18 @@ Weread is a minimalist, privacy-focused web reader that provides a clean reading
 
 ## ✨ Features
 
-- 📂 **Local First** - Import TXT books directly from your device
-- 🔒 **Zero Commitment** - No accounts, no signups, no strings attached
-- 🔐 **Privacy by Default** - No analytics, no telemetry, no data collection
-- 🚫 **No Server** - Zero backend dependencies (pure client-side)
-- ⚡ **PWA Magic** - Add to home screen & read offline like native apps
-- 📱 **Responsive Design** - Optimized for both desktop and mobile devices
-- 🌍 **Multi-language Support** - English and Chinese interfaces
-- 🔍 **Smart Search** - Search by title, author, or content
-- 📖 **Reading Progress** - Automatic progress tracking and bookmarking
-- 🎨 **Modern UI** - Clean, distraction-free reading interface
-- ⚙️ **Customizable** - Adjustable font size, theme, and reading preferences
+- 📚 **Local TXT Support** - Import and read local TXT files directly
+- 🤖 **AI Chapter Recognition** - Intelligent chapter extraction using AI algorithms
+- 🧠 **Local AI Model** - Lightweight ONNX-based neural network for chapter detection
+- 📱 **PWA Ready** - Install as a progressive web app for offline reading
+- 🔒 **Privacy First** - No server-side processing, all data stays local
+- 🌍 **Multi-language** - Support for Chinese and English interfaces
+- 📖 **Responsive Design** - Optimized for both desktop and mobile devices
+- 🎨 **Modern UI** - Clean and intuitive user interface
+- ⚡ **Fast Performance** - Built with React and optimized for speed
+- 🔄 **Smart Chapter Detection** - Hybrid approach combining traditional regex and AI methods
+- 📊 **Reading Progress** - Track your reading progress automatically
+- 🎯 **Confidence Scoring** - AI model provides confidence scores for chapter detection
 
 ## 🛠️ Tech Stack
 
@@ -67,6 +68,7 @@ Weread is a minimalist, privacy-focused web reader that provides a clean reading
 - **PWA**: Service Worker + Web App Manifest
 - **UI Components**: Custom components + RanUI
 - **Text Processing**: Custom text transformation and encoding detection
+- **AI/ML**: ONNX Runtime Web for local neural network inference
 - **Package Manager**: pnpm
 
 ## 🚀 Getting Started
@@ -116,7 +118,26 @@ pnpm preview
 2. **Read**: Click on any book to start reading
 3. **Navigate**: Use arrow keys or swipe gestures to turn pages
 4. **Search**: Use the search bar to find books by title, author, or content
-5. **Install**: Add to home screen for offline access (PWA)
+5. **AI Chapters**: Enable AI chapter recognition for intelligent chapter detection
+6. **Install**: Add to home screen for offline access (PWA)
+
+### 🤖 AI Chapter Recognition
+
+Weread features a local AI model for intelligent chapter detection:
+
+1. **Local Processing**: All AI processing happens locally in your browser
+2. **Hybrid Approach**: Combines traditional regex patterns with neural network inference
+3. **Confidence Scoring**: Each detected chapter comes with a confidence score
+4. **Fallback System**: Automatically falls back to traditional methods if AI fails
+5. **Model Management**: Download and manage ONNX models for different languages
+
+#### Setting up the AI Model
+
+1. Visit the AI Model Generator page (`/ai-model-generator`)
+2. Click "Generate Model File" to download the ONNX model
+3. Place the model file in `public/models/chapter_classifier.onnx`
+4. Refresh the page to load the model
+5. Enable AI chapter recognition in book settings
 
 ## 🏗️ Project Structure
 

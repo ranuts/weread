@@ -34,7 +34,6 @@ export const addBook = (data: {
 }): Promise<IDBResult<BookInfo>> => {
   const { title = '', author = '', image = '', content, encoding = '' } = data;
   const hash = CryptoJS.MD5(typeof content === 'string' ? content : CryptoJS.lib.WordArray.create(content)).toString();
-
   // 先检查是否已存在相同 hash 的书籍
   return getBookById<BookInfo>(hash).then((res) => {
     if (!res.error && res.data) {

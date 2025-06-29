@@ -84,6 +84,7 @@ export default tseslint.config(
       'no-extra-semi': 'off',
       '@typescript-eslint/no-extra-semi': 'off', // conflicts with prettier
       '@typescript-eslint/no-inferrable-types': 'off',
+      '@typescript-eslint/consistent-generic-constructors': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {

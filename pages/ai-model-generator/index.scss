@@ -1,0 +1,389 @@
+.ai-model-generator {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  .generator-header {
+    text-align: center;
+    margin-bottom: 2rem;
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      font-size: 1.125rem;
+      color: #6b7280;
+    }
+  }
+
+  .generator-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        color: #374151;
+
+        input[type='checkbox'] {
+          width: 1.25rem;
+          height: 1.25rem;
+          accent-color: #3b82f6;
+        }
+      }
+
+      .model-status {
+        font-size: 0.875rem;
+        color: #6b7280;
+
+        span {
+          font-weight: 600;
+        }
+      }
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &.btn-primary {
+        background: #3b82f6;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background: #2563eb;
+        }
+
+        &:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+      }
+
+      &.btn-secondary {
+        background: #6b7280;
+        color: white;
+
+        &:hover:not(:disabled) {
+          background: #4b5563;
+        }
+
+        &:disabled {
+          background: #9ca3af;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  // 训练进度样式
+  .training-progress {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 0.5rem;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #0c4a6e;
+      margin-bottom: 1rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 0.75rem;
+      background: #e0f2fe;
+      border-radius: 0.375rem;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0ea5e9, #0284c7);
+        transition: width 0.3s ease;
+        border-radius: 0.375rem;
+      }
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      color: #0c4a6e;
+
+      span:first-child {
+        font-weight: 500;
+      }
+
+      span:last-child {
+        font-weight: 600;
+      }
+    }
+
+    .training-metrics {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #0ea5e9;
+
+      .metric {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .metric-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #0c4a6e;
+        }
+
+        .metric-value {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #0ea5e9;
+          background: white;
+          padding: 0.25rem 0.5rem;
+          border-radius: 0.25rem;
+          border: 1px solid #0ea5e9;
+        }
+      }
+    }
+  }
+
+  // 训练统计样式
+  .training-stats {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f0fdf4;
+    border: 1px solid #16a34a;
+    border-radius: 0.5rem;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #14532d;
+      margin-bottom: 1rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+
+      .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: white;
+        border-radius: 0.375rem;
+        border: 1px solid #bbf7d0;
+
+        .stat-value {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #16a34a;
+          margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+          font-size: 0.875rem;
+          color: #166534;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .books-list {
+      font-size: 0.875rem;
+      color: #166534;
+      line-height: 1.5;
+
+      strong {
+        color: #14532d;
+      }
+    }
+  }
+
+  .generator-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+
+    .input-section,
+    .output-section {
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+      }
+    }
+
+    .input-section {
+      textarea {
+        width: 100%;
+        padding: 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        font-family: inherit;
+        font-size: 0.875rem;
+        line-height: 1.5;
+        resize: vertical;
+        margin-bottom: 1rem;
+
+        &:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+      }
+    }
+
+    .output-section {
+      .chapters-list {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        background: white;
+
+        .chapter-item {
+          padding: 1rem;
+          border-bottom: 1px solid #f3f4f6;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .chapter-title {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .confidence {
+              font-size: 0.75rem;
+              font-weight: 500;
+              color: #059669;
+              background: #d1fae5;
+              padding: 0.25rem 0.5rem;
+              border-radius: 0.25rem;
+            }
+          }
+
+          .chapter-info {
+            font-size: 0.875rem;
+            color: #6b7280;
+          }
+        }
+      }
+
+      .no-results {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        font-style: italic;
+      }
+    }
+  }
+
+  .generator-info {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 1rem;
+    }
+
+    ul,
+    ol {
+      margin-left: 1.5rem;
+      color: #4b5563;
+      line-height: 1.6;
+
+      li {
+        margin-bottom: 0.5rem;
+
+        strong {
+          color: #1f2937;
+        }
+      }
+    }
+
+    code {
+      background: #e5e7eb;
+      padding: 0.125rem 0.25rem;
+      border-radius: 0.25rem;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .ai-model-generator {
+    padding: 1rem;
+
+    .generator-header {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+
+    .generator-controls {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+
+      .control-group {
+        justify-content: space-between;
+      }
+    }
+
+    .training-stats {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .generator-content {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+}
