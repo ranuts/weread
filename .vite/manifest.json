@@ -204,7 +204,7 @@
     "isDynamicEntry": true
   },
   "views/index.html": {
-    "file": "assets/index-DEzrDR5H.js",
+    "file": "assets/index-Iy3e7vr3.js",
     "name": "index",
     "src": "views/index.html",
     "isEntry": true,
@@ -240,7 +240,7 @@
       "node_modules/.pnpm/ranui@0.1.10-alpha.23/node_modules/ranui/dist/without-content-CdJw7vHM.js"
     ],
     "css": [
-      "assets/index-3dP5ma-A.css"
+      "assets/index-BbPosUVg.css"
     ],
     "assets": [
       "assets/princekin-DlE6LWWh.txt",
