@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# 模型文件
+*.pth
+*.onnx
+*.pt
+
+# 训练数据
+training_data.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
