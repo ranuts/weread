@@ -431,13 +431,22 @@ export const transformTextToExpectedFormat = async ({
   // 1. 过滤空格换行
   const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
 
-  // 2. 提取章节标题 - 支持 AI
+  // 2. 提取章节标题 - 使用增强的 AI 模型
   let extractedChapters: ChapterItem[] = [];
   try {
     extractedChapters = await extractChaptersWithAI(text, {
       useLocalModel: true,
+      useEnhancedModel: true, // 使用增强的 ONNX 模型
       confidenceThreshold: 0.7,
       maxChapters: 100,
+      enhancedConfig: {
+        modelPath: '/weread/models/chapter_classifier.onnx',
+        threshold: 0.7,
+        maxLength: 256,
+        batchSize: 32,
+        useContextFeatures: true, // 使用上下文特征
+      },
+      // 保留 tfjs 作为后备
       tfjsConfig: {
         modelPath: '/weread/models/chapter_classifier.json',
         threshold: 0.7,

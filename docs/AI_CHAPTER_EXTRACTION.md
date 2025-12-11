@@ -2,26 +2,29 @@
 
 ## 概述
 
-AI 章节提取功能是一个智能的文本分析工具，能够自动识别和提取 TXT 文件中的章节结构。相比传统的基于正则表达式的章节识别方法，AI 方法更加灵活和准确，能够处理各种不同格式的文本文件。
+AI 章节提取功能是一个基于深度学习的智能文本分析工具，能够自动识别和提取 TXT 文件中的章节结构。使用 **ONNX Runtime** 在浏览器中运行本地 AI 模型，支持持续训练和模型更新，能够适应各种不同格式的文本文件。
 
 ## 功能特点
 
-### 🤖 智能识别
+### 🤖 基于文本的 AI 识别
 
-- **多格式支持**：支持中文、英文、罗马数字等多种章节标记格式
-- **模式识别**：能够识别重复的章节标题模式
-- **启发式分析**：基于文本结构特征进行智能判断
+- **深度学习模型**：使用 ONNX Runtime 运行本地训练的神经网络模型
+- **上下文特征**：分析前后行文本，提高识别准确率
+- **持续训练**：支持从用户数据中学习，不断改进模型
+- **多格式支持**：自动适应中文、英文、罗马数字等多种章节标记格式
 
-### 🔄 混合策略
+### 🔄 智能降级策略
 
-- **传统方法优先**：首先使用正则表达式进行快速匹配
-- **AI 辅助增强**：当传统方法效果不佳时，自动启用 AI 分析
-- **结果合并**：智能合并两种方法的结果，避免重复
+- **增强模型优先**：优先使用 ONNX 增强模型进行识别
+- **TF.js 后备**：如果 ONNX 模型不可用，自动降级到 TensorFlow.js 模型
+- **启发式兜底**：最终降级到基于规则的启发式方法
+- **结果合并**：智能合并多种方法的结果，避免重复
 
 ### ⚡ 高性能
 
-- **本地处理**：所有分析都在本地进行，保护隐私
-- **快速响应**：优化的算法确保处理速度
+- **本地处理**：所有分析都在浏览器本地进行，保护隐私
+- **ONNX Runtime**：使用优化的 ONNX Runtime，比 TensorFlow.js 更快更轻量
+- **批量处理**：支持批量预测，提高处理速度
 - **内存友好**：支持大文件处理，内存占用可控
 
 ## 使用方法
@@ -32,18 +35,29 @@ AI 章节提取功能是一个智能的文本分析工具，能够自动识别�
 import { extractChaptersWithAI } from '@/lib/aiChapterExtractor';
 
 const text = `
-第一章 引言
-这是第一章的内容。
+一
 
-第二章 正文
-这是第二章的内容。
+我们所要介绍的是祥子...
+
+二
+
+因为高兴，胆子也就大起来...
 `;
 
-const chapters = await extractChaptersWithAI(text);
+const chapters = await extractChaptersWithAI(text, {
+  useEnhancedModel: true, // 使用增强的 ONNX 模型
+  confidenceThreshold: 0.7,
+  enhancedConfig: {
+    modelPath: '/weread/models/chapter_classifier.onnx',
+    threshold: 0.7,
+    maxLength: 256,
+    useContextFeatures: true, // 使用上下文特征
+  },
+});
 console.log(chapters);
-// 输出: [
-//   { title: "第一章 引言", start: 0, end: 50 },
-//   { title: "第二章 正文", start: 51, end: 100 }
+// 输出：[
+//   { title: "一", start: 0, end: 10, confidence: 0.95 },
+//   { title: "二", start: 100, end: 110, confidence: 0.92 }
 // ]
 ```
 
@@ -53,11 +67,19 @@ console.log(chapters);
 import { AIChapterExtractor } from '@/lib/aiChapterExtractor';
 
 const extractor = new AIChapterExtractor({
+  useEnhancedModel: true, // 使用增强的 ONNX 模型
   confidenceThreshold: 0.8, // 置信度阈值
   maxChapters: 50, // 最大章节数
-  useLocalModel: true, // 使用本地模型
+  enhancedConfig: {
+    modelPath: '/weread/models/chapter_classifier.onnx',
+    threshold: 0.8,
+    maxLength: 256,
+    batchSize: 64,
+    useContextFeatures: true, // 启用上下文特征
+  },
 });
 
+await extractor.initialize();
 const chapters = await extractor.extractChapters(text);
 ```
 
@@ -115,40 +137,90 @@ III. Third Chapter
 
 ### 核心算法
 
-1. **文本特征提取**
+1. **增强的文本特征提取**
 
-   - 行长度分析
-   - 特殊字符检测
-   - 数字模式识别
-   - 重复模式分析
+   - **上下文特征**：分析前后行文本，识别章节标题的上下文模式
+   - **位置特征**：检测空行、段落开始等位置特征
+   - **长度特征**：章节标题通常较短
+   - **模式特征**：识别数字、特殊字符等模式
+   - **相似度特征**：检测重复的章节标题模式
 
-2. **启发式规则**
+2. **ONNX 模型推理**
 
-   - 章节标题长度限制
-   - 位置特征分析
-   - 相似度计算
-   - 上下文分析
+   - 使用 ONNX Runtime 在浏览器中运行预训练模型
+   - 支持批量预测，提高处理速度
+   - 模型输出置信度分数，用于筛选结果
 
-3. **智能决策**
-   - 传统方法效果评估
-   - AI 方法触发条件
-   - 结果质量评估
-   - 结果合并策略
+3. **智能降级策略**
+   - 优先使用增强的 ONNX 模型
+   - 如果模型不可用，降级到 TensorFlow.js 模型
+   - 最终降级到基于规则的启发式方法
+   - 智能合并多种方法的结果
+
+### 模型训练
+
+模型可以通过以下方式训练和更新：
+
+1. **准备训练数据**
+
+```typescript
+import { ONNXModelTrainer } from '@/lib/onnxModelTrainer';
+
+const trainingData = ONNXModelTrainer.generateTrainingData(
+  bookText,
+  knownChapters, // 已知的章节标题列表
+  {
+    includeContext: true, // 包含上下文特征
+    balanceSamples: true, // 平衡正负样本
+  }
+);
+
+// 导出训练数据
+const jsonData = ONNXModelTrainer.exportTrainingData(trainingData);
+```
+
+2. **训练模型**（需要在 Python 环境中进行）
+
+使用 PyTorch 或 TensorFlow 训练模型，然后导出为 ONNX 格式：
+
+```python
+# 参考 lib/onnxModelTrainer.ts 中的 Python 训练脚本模板
+```
+
+3. **部署模型**
+
+将训练好的 ONNX 模型文件放到 `public/models/` 目录下。
 
 ### 性能优化
 
+- **ONNX Runtime**：使用优化的 ONNX Runtime，比 TensorFlow.js 更快更轻量
+- **批量处理**：支持批量预测，减少推理次数
 - **异步处理**：使用 Promise 和 async/await 避免阻塞
-- **内存管理**：及时释放不需要的数据
-- **缓存机制**：避免重复计算
-- **错误处理**：优雅降级到传统方法
+- **内存管理**：及时释放不需要的数据和模型资源
+- **错误处理**：优雅降级到其他方法
 
 ## 配置选项
 
-| 选项                  | 类型    | 默认值 | 说明             |
-| --------------------- | ------- | ------ | ---------------- |
-| `useLocalModel`       | boolean | true   | 是否使用本地模型 |
-| `confidenceThreshold` | number  | 0.7    | 置信度阈值       |
-| `maxChapters`         | number  | 100    | 最大章节数限制   |
+### AIChapterExtractorOptions
+
+| 选项                  | 类型    | 默认值 | 说明                           |
+| --------------------- | ------- | ------ | ------------------------------ |
+| `useEnhancedModel`    | boolean | true   | 是否使用增强的 ONNX 模型        |
+| `useLocalModel`        | boolean | true   | 是否使用本地模型（TF.js 后备）  |
+| `confidenceThreshold` | number  | 0.7    | 置信度阈值                     |
+| `maxChapters`         | number  | 100    | 最大章节数限制                 |
+| `enhancedConfig`       | object  | -      | 增强模型的配置（见下表）        |
+| `tfjsConfig`           | object  | -      | TensorFlow.js 模型的配置        |
+
+### EnhancedAIConfig
+
+| 选项                | 类型    | 默认值 | 说明                     |
+| ------------------- | ------- | ------ | ------------------------ |
+| `modelPath`         | string  | -      | ONNX 模型文件路径         |
+| `threshold`         | number  | 0.7    | 置信度阈值               |
+| `maxLength`         | number  | 256    | 最大输入长度             |
+| `batchSize`         | number  | 32     | 批量处理大小             |
+| `useContextFeatures`| boolean | true   | 是否使用上下文特征       |
 
 ## 错误处理
 
@@ -177,19 +249,67 @@ await runAllTests();
 - 边界情况处理
 - 错误场景测试
 
+## 模型训练指南
+
+### 1. 收集训练数据
+
+从已知章节的书籍中收集训练数据：
+
+```typescript
+import { ONNXModelTrainer } from '@/lib/onnxModelTrainer';
+
+// 从书籍文本和已知章节生成训练数据
+const trainingData = ONNXModelTrainer.generateTrainingData(
+  bookText,
+  ['一', '二', '三', '第一章', '第二章'], // 已知章节
+  {
+    includeContext: true,
+    balanceSamples: true,
+  }
+);
+
+// 导出为 JSON
+const jsonData = ONNXModelTrainer.exportTrainingData(trainingData);
+```
+
+### 2. 训练模型
+
+在 Python 环境中使用 PyTorch 或 TensorFlow 训练模型：
+
+```python
+# 参考 lib/onnxModelTrainer.ts 中的 Python 训练脚本模板
+# 主要步骤：
+# 1. 加载训练数据
+# 2. 构建模型（LSTM/Transformer）
+# 3. 训练模型
+# 4. 导出为 ONNX 格式
+```
+
+### 3. 部署模型
+
+将训练好的 `.onnx` 模型文件放到 `public/models/chapter_classifier.onnx`
+
+### 4. 持续改进
+
+- 收集用户反馈的章节识别结果
+- 定期重新训练模型
+- 更新模型文件
+
 ## 未来计划
 
 ### 短期目标
 
-- [ ] 集成真正的本地 AI 模型
-- [ ] 支持更多文本格式
-- [ ] 优化处理性能
+- [x] 集成 ONNX Runtime 增强模型
+- [x] 支持上下文特征提取
+- [ ] 提供模型训练工具
+- [ ] 支持在线模型更新
 
 ### 长期目标
 
 - [ ] 支持多语言章节识别
 - [ ] 学习用户偏好
-- [ ] 云端 AI 服务集成
+- [ ] 云端模型训练服务
+- [ ] 自动模型优化
 
 ## 贡献
 

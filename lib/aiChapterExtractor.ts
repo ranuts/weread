@@ -1,8 +1,10 @@
 import type { ChapterItem } from './transformText';
 import { TFJSChapterExtractor, type ChapterInfo as TFJSChapterInfo } from './tfjsChapterExtractor';
+import { EnhancedAIChapterExtractor, type EnhancedAIConfig } from './enhancedAIChapterExtractor';
 
 export interface AIChapterExtractorOptions {
   useLocalModel?: boolean;
+  useEnhancedModel?: boolean; // 使用增强的 ONNX 模型
   confidenceThreshold?: number;
   maxChapters?: number;
   tfjsConfig?: {
@@ -12,15 +14,21 @@ export interface AIChapterExtractorOptions {
     batchSize?: number;
     vocabSize?: number;
   };
+  enhancedConfig?: Partial<EnhancedAIConfig>;
 }
 
 export class AIChapterExtractor {
-  private options: Required<AIChapterExtractorOptions>;
+  private options: Required<Omit<AIChapterExtractorOptions, 'tfjsConfig' | 'enhancedConfig'>> & {
+    tfjsConfig?: AIChapterExtractorOptions['tfjsConfig'];
+    enhancedConfig?: AIChapterExtractorOptions['enhancedConfig'];
+  };
   private tfjsExtractor: TFJSChapterExtractor | null = null;
+  private enhancedExtractor: EnhancedAIChapterExtractor | null = null;
 
   constructor(options: AIChapterExtractorOptions = {}) {
     this.options = {
       useLocalModel: true,
+      useEnhancedModel: true, // 默认使用增强模型
       confidenceThreshold: 0.7,
       maxChapters: 100,
       tfjsConfig: {
@@ -30,12 +38,20 @@ export class AIChapterExtractor {
         batchSize: 32,
         vocabSize: 1000,
       },
+      enhancedConfig: {},
       ...options,
     };
   }
 
   async initialize(): Promise<void> {
-    if (this.options.useLocalModel) {
+    // 优先使用增强的 ONNX 模型
+    if (this.options.useEnhancedModel) {
+      this.enhancedExtractor = new EnhancedAIChapterExtractor({
+        threshold: this.options.confidenceThreshold,
+        ...this.options.enhancedConfig,
+      });
+      await this.enhancedExtractor.initialize();
+    } else if (this.options.useLocalModel) {
       this.tfjsExtractor = new TFJSChapterExtractor(this.options.tfjsConfig);
       await this.tfjsExtractor.initialize();
     }
@@ -47,17 +63,51 @@ export class AIChapterExtractor {
     }
 
     try {
-      // 使用 TensorFlow.js 模型提取章节
-      const tfjsChapters = await this.extractChaptersWithTFJS(text);
-      
-      // 使用启发式方法作为补充
-      const heuristicChapters = this.extractChaptersWithHeuristics(text);
-      
-      // 合并结果
-      return this.mergeResults(heuristicChapters, tfjsChapters, text);
+      // 优先使用增强的 ONNX 模型
+      if (this.enhancedExtractor) {
+        const enhancedChapters = await this.extractChaptersWithEnhanced(text);
+        if (enhancedChapters.length > 0) {
+          return enhancedChapters;
+        }
+      }
+
+      // 回退到 TensorFlow.js 模型
+      if (this.tfjsExtractor) {
+        const tfjsChapters = await this.extractChaptersWithTFJS(text);
+        if (tfjsChapters.length > 0) {
+          return tfjsChapters;
+        }
+      }
+
+      // 最后使用启发式方法
+      return this.extractChaptersWithHeuristics(text);
     } catch (error) {
       console.warn('AI chapter extraction failed, using heuristic method only:', error);
       return this.extractChaptersWithHeuristics(text);
+    }
+  }
+
+  /**
+   * 使用增强的 ONNX 模型提取章节
+   */
+  private async extractChaptersWithEnhanced(text: string): Promise<ChapterItem[]> {
+    if (!this.enhancedExtractor) {
+      return [];
+    }
+
+    try {
+      const enhancedChapters = await this.enhancedExtractor.extractChapters(text);
+
+      // 转换为 ChapterItem 格式
+      return enhancedChapters.map((chapter) => ({
+        title: chapter.title,
+        start: chapter.startIndex,
+        end: chapter.endIndex,
+        confidence: chapter.confidence,
+      }));
+    } catch (error) {
+      console.warn('Enhanced AI chapter extraction failed:', error);
+      return [];
     }
   }
 
@@ -293,6 +343,10 @@ export class AIChapterExtractor {
    * 清理资源
    */
   async dispose(): Promise<void> {
+    if (this.enhancedExtractor) {
+      await this.enhancedExtractor.dispose();
+      this.enhancedExtractor = null;
+    }
     if (this.tfjsExtractor) {
       await this.tfjsExtractor.dispose();
       this.tfjsExtractor = null;
