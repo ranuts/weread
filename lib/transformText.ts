@@ -1,5 +1,6 @@
 import jschardet from 'jschardet';
 import { Locales, t } from '@/locales';
+import { detectChapters } from '@/lib/chapter';
 
 export interface TransformText {
   encoding: string;
@@ -300,74 +301,12 @@ export const pagingText = (content: string, container: HTMLElement): PagingTextR
   };
 };
 
-export const extractChapters = (text: string): { title: string; startIndex: number }[] => {
-  const chapterRegex = /(?:第 [一二三四五六七八九十百千万]+章|Chapter\s+\d+|CHAPTER\s+\d+|第\d+ 章)\s*.+/g;
-  const chapters = [];
-  let match;
-  while ((match = chapterRegex.exec(text)) != null) {
-    chapters.push({ title: match[0], startIndex: match.index });
-  }
-  return chapters;
-};
-
 export interface ChapterItem {
   title: string;
   start: number;
   end?: number;
   pageNum?: number;
 }
-
-export const extractRomanChapters = (text: string): ChapterItem[] => {
-  const romanRegex = /(?:\s|^)(I{1,3}|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV|XV|XVI|XVII|XVIII|XIX|XX)(?:\s|$)/g;
-  const chapters: ChapterItem[] = [];
-  let match;
-  while ((match = romanRegex.exec(text)) != null) {
-    chapters.push({ title: match[1], start: match.index });
-  }
-  chapters.forEach((chapter, index) => {
-    const nextChapter = chapters[index + 1];
-    chapter.end = nextChapter ? nextChapter.start : text.length;
-  });
-  return chapters;
-};
-/**
- * @description: 罗马数字转阿拉伯数字
- * @param {string} roman
- * @return {number}
- */
-export const romanToArabic = (roman: string): number => {
-  const romanNumeralMap: Record<string, number> = {
-    I: 1,
-    IV: 4,
-    V: 5,
-    IX: 9,
-    X: 10,
-    XL: 40,
-    L: 50,
-    XC: 90,
-    C: 100,
-    CD: 400,
-    D: 500,
-    CM: 900,
-    M: 1000,
-  };
-
-  let arabic = 0;
-  let i = 0;
-
-  while (i < roman.length) {
-    const twoChar = roman[i] + (roman[i + 1] || '');
-    if (romanNumeralMap[twoChar]) {
-      arabic += romanNumeralMap[twoChar];
-      i += 2;
-    } else {
-      arabic += romanNumeralMap[roman[i]];
-      i += 1;
-    }
-  }
-
-  return arabic;
-};
 
 export const toString = (value: unknown): string => {
   return value == null ? '' : String(value);
@@ -427,13 +366,16 @@ export const transformTextToExpectedFormat = ({
 }): TextSyntaxTree => {
   // 1. 过滤空格换行
   const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
-  // 2. 提取章节标题
-  const extractedChapters = extractCaptionTitleChapters(text);
+  // 2. 提取章节标题：优先 <caption-title> 标注，无标注的原始 txt 走自动识别
+  let extractedChapters: ChapterItem[] = extractCaptionTitleChapters(text);
+  if (extractedChapters.length === 0) {
+    extractedChapters = detectChapters(text);
+  }
   // 3. 把文本按章节划分
   const sections: Section[] = [];
   extractedChapters.forEach((item, index) => {
     const { start, end, title } = item;
-    if (index === 0) {
+    if (index === 0 && start > 0) {
       const section = text.slice(0, start);
       sections.push({ title: t('preface'), section });
     }
