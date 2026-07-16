@@ -22,7 +22,7 @@ LE PETIT PRINCE
 
 小 王 子
 
-<caption-title>  I </caption-title>
+  I 
 
     当我还只有六岁的时候，在一本描写原始森林的名叫《真实的故事》的书中，
 
@@ -80,7 +80,7 @@ LE PETIT PRINCE
 
 是大人们就十分高兴能认识我这样一个通情达理的人。
 
- <caption-title>  II </caption-title>
+   II 
 
     我就这样孤独地生活着，没有一个能真正谈得来的人，一直到六年前在撒哈
 
@@ -190,7 +190,7 @@ LE PETIT PRINCE
 
     就这样，我认识了小王子。
 
-<caption-title>   III</caption-title>
+   III
 
     我费了好长时间才弄清楚他是从哪里来的。小王子向我提出了很多问题，可
 
@@ -269,7 +269,7 @@ LE PETIT PRINCE
 
     “一直朝前走，也不会走出多远…”
 
- <caption-title>  IV </caption-title>
+   IV 
 
     我还了解到另一件重要的事，就是他老家所在的那个星球比一座房子大不了
 
@@ -358,7 +358,7 @@ LE PETIT PRINCE
 
 人们差不多。我一定是变老了。
 
-    <caption-title> V  </caption-title>
+     V  
 
     每天我都了解到一些关于小王子的星球，他的出走和旅行等事情。这些都是
 
@@ -446,7 +446,7 @@ LE PETIT PRINCE
 
 一种急切的心情在激励着我。
 
-<caption-title>   VI </caption-title>
+   VI 
 
     啊！小王子，就这样，我逐渐懂得了你那忧郁的生活。过去相当长的时间里
 
@@ -482,7 +482,7 @@ LE PETIT PRINCE
 
     小王子没有回答。
 
- <caption-title>  VII </caption-title>
+   VII 
 
     第五天，还是羊的事，把小王子的生活秘密向我揭开了。好象默默地思索了
 
@@ -589,7 +589,7 @@ LE PETIT PRINCE
 
 达到他的境界，怎样才能再进入他的境界…唉，泪水的世界是多么神秘啊！
 
-<caption-title>  VIII </caption-title>
+  VIII 
 
     很快我就进一步了解了这朵花儿。在小王子的星球上，过去一直都生长着一
 
@@ -687,7 +687,7 @@ LE PETIT PRINCE
 
 
 
- <caption-title>  IX </caption-title>
+   IX 
 
     我想小王子大概是利用一群候鸟迁徙的机会跑出来的。在他出发的那天早上，
 
@@ -741,7 +741,7 @@ LE PETIT PRINCE
 
     她是怕小王子看见她在哭。她是一朵非常骄傲的花…
 
-    <caption-title> X  </caption-title>
+     X  
 
     在附近的宇宙中，还有 325、326、327、328、329、330 等几颗小行星。他
 
@@ -911,7 +911,7 @@ LE PETIT PRINCE
 
     小王子在旅途中自言自语地说：“这些大人真奇怪。”
 
- <caption-title>  XI </caption-title>
+   XI 
 
     第二个行星上住着一个爱虚荣的人。
 
@@ -963,7 +963,7 @@ LE PETIT PRINCE
 
     小王子在路上自言自语地说了一句：“这些大人，肯定是十分古怪的。”
 
-<caption-title>   XII </caption-title>
+   XII 
 
     小王子所访问的下一个星球上住着一个酒鬼。访问时间非常短，可是它却使
 
@@ -993,7 +993,7 @@ LE PETIT PRINCE
 
     在旅途中，他自言自语地说道：“这些大人确实真叫怪。”
 
-<caption-title>  XIII </caption-title>
+  XIII 
 
     第四个行星是一个实业家的星球。这个人忙得不可开交，小王子到来的时候，
 
@@ -1135,7 +1135,7 @@ LE PETIT PRINCE
 
     在旅途中，小王子只是自言自语地说了一句：“这些大人们真是奇怪极了。”
 
-<caption-title>   XIV </caption-title>
+   XIV 
 
     第五颗行星非常奇怪，是这些星星中最小的一颗。行星上刚好能容得下一盏
 
@@ -1245,7 +1245,7 @@ LE PETIT PRINCE
 
 每二十四小时就有一千四百四十次日落！
 
-    <caption-title> XV  </caption-title>
+     XV  
 
     第六颗行星则要大十倍。上面住着一位老先生，他在写作大部头的书。
 
@@ -1378,7 +1378,7 @@ LE PETIT PRINCE
 
     于是小王子就走了，他一边走一边想着他的花。
 
-   <caption-title> XVI </caption-title>
+    XVI 
 
     第七个行星，于是就是地球了。
 
@@ -1410,7 +1410,7 @@ LE PETIT PRINCE
 
 过着闲逸、懒散的生活：他们每年只工作两次。
 
-  <caption-title> XVII </caption-title>
+   XVII 
 
     当人们想要说得俏皮些的时候，说话就可能会不大实在。在给你们讲点灯人
 
@@ -1496,7 +1496,7 @@ LE PETIT PRINCE
 
     于是他们又都沉默起来。
 
-<caption-title> XVIII </caption-title>
+ XVIII 
 
     小王子穿过沙漠。他只见过一朵花，一个有着三枚花瓣的花朵，一朵很不起
 
@@ -1524,7 +1524,7 @@ LE PETIT PRINCE
 
     “再见。”花说。
 
-  <caption-title> XIX </caption-title>
+   XIX 
 
     小王子爬上一座高山。过去他所见过的山就是那三座只有他膝盖那么高的火
 
@@ -1552,7 +1552,7 @@ LE PETIT PRINCE
 
 朵花。她总是自己先说话…”
 
-    <caption-title> XX  </caption-title>
+     XX  
 
     在沙漠、岩石、雪地上行走了很长的时间以后，小王子终于发现了一条大路。
 
@@ -1590,7 +1590,7 @@ LE PETIT PRINCE
 
 泣起来。
 
-   <caption-title> XXI </caption-title>
+    XXI 
 
     就在这当儿，跑来了一只狐狸。
 
@@ -1792,7 +1792,7 @@ LE PETIT PRINCE
 
     “我要对我的玫瑰负责…”小王子又重复着……
 
-  <caption-title> XXII </caption-title>
+   XXII 
 
     “你好。”小王子说道。
 
@@ -1836,7 +1836,7 @@ LE PETIT PRINCE
 
     “他们真幸运。”扳道工说。
 
-  <caption-title> XXIII </caption-title>
+   XXIII 
 
     “你好。”小王子说。
 
@@ -1858,7 +1858,7 @@ LE PETIT PRINCE
 
 泉走去…”
 
-  <caption-title> XXIV </caption-title>
+   XXIV 
 
     这是我在沙漠上出了事故的第八天。我听着有关这个商人的故事，喝完了我
 
@@ -1960,7 +1960,7 @@ LE PETIT PRINCE
 
     于是，就这样走着，我在黎明时发现了水井。
 
-    <caption-title> XXV  </caption-title>
+     XXV  
 
     “那些人们，他们往快车里拥挤，但是他们却不知道要寻找什么。于是，他
 
@@ -2086,7 +2086,7 @@ LE PETIT PRINCE
 
     但是，我放心不下。我想起了狐狸的话。如果被人驯服了，就可能会要哭的…
 
-  <caption-title> XXVI </caption-title>
+   XXVI 
 
     在井旁边有一堵残缺的石墙。第二天晚上我工作回来的时候，我远远地看见
 
@@ -2329,7 +2329,7 @@ LE PETIT PRINCE
 
 有。
 
-  <caption-title> XXVII </caption-title>
+   XXVII 
 
     到现在，一点不错，已经有六年了…我还从未讲过这个故事。同伴们重新见
 
