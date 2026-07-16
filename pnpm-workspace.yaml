@@ -1,3 +1,10 @@
 allowBuilds:
-  esbuild: set this to true or false
-  unrs-resolver: set this to true or false
+  # vite 的核心依赖，需要安装原生二进制
+  esbuild: true
+  # eslint-plugin-import-x 的原生解析器
+  unrs-resolver: true
+  # 以下均为 Node 端可选依赖，浏览器项目用不到，禁止执行构建脚本
+  '@parcel/watcher': false
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: false
