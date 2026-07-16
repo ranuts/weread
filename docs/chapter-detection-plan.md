@@ -26,7 +26,7 @@ txt 文本
 关键原则：**模型只替换/增强第 1 层**。第 2 层全局验证是精度的真正来源且语言无关，
 无论模型是否启用都必须经过。
 
-## Phase 1 — 规则层（可独立上线）
+## Phase 1 — 规则层（可独立上线）✅ 已完成（2026-07-16，c986090）
 
 新增 `lib/chapter/` 模块：
 
@@ -52,19 +52,21 @@ txt 文本
 
 **验收**：对 fixtures 集合章节边界准确率 ≥ 95%，无网络依赖，可直接合入主干上线。
 
-## Phase 2 — 浏览器推理基础设施（模型无关，可先用占位模型打通）
+## Phase 2 — 浏览器推理基础设施（模型无关）✅ 基本完成（2026-07-16）
 
-- 依赖：`onnxruntime-web`（或 `@huggingface/transformers`，二选一，选前者更可控体积）
-- 新增 `workers/nlpWorker.ts`：
-  - 模型下载（带进度回调）→ OPFS 缓存（Cache API 兜底），版本化文件名支持热更新
-  - Execution provider：WebGPU 优先，WASM SIMD + threads 兜底
-  - 批量推理 API：`classifyLines(lines: string[]): Promise<number[]>`（返回标题概率）
+- 依赖：**选定 `@huggingface/transformers`**（放弃裸 onnxruntime-web：mDeBERTa 需要
+  SentencePiece 分词器，transformers.js 内置且自带 Cache API 缓存与进度回调，省掉整个手写层）
+- `workers/nlpWorker.ts`：operationId 关联的消息协议（与 dbWorker 风格一致），
+  WebGPU 优先 / WASM 兜底 / `device` 参数可强制指定，模型走 Cache API（`transformers-cache`）
+- `lib/nlp/`：protocol.ts（双端共享类型）、score.ts（输出归一化与标题概率映射）、
+  index.ts（`ChapterClassifier` 客户端封装，懒建 worker，promise 化 API）
 - 加载策略：**懒加载**。规则层置信度高时完全不下载模型；置信度低（无主模式家族/序列断裂多）
-  或用户手动触发「增强解析」时才拉取
+  或用户手动触发「增强解析」时才拉取（P4 接线）
 - 移动端：UA/内存探测，iOS 上默认只用规则层或提供裁剪版模型（见 Phase 3）
 
-**验收**：占位模型（任意 HF 上现成的 deberta-v2 ONNX）在 worker 内完成加载→缓存→批量推理→
-离线二次加载全链路，桌面 Chrome/Safari + iOS Safari 真机通过。
+**验收结果**：占位模型（Xenova/tiny-random-RoFormerForSequenceClassification）在
+桌面 Chrome 通过全链路：下载（149 个进度事件）→ WebGPU 推理 → 强制 WASM 推理 →
+Cache API 持久化 → 新 worker 二次加载 ~600ms。**待办：iOS Safari 真机验证**。
 
 ## Phase 3 — 训练管线（仓库外 Python，产物回流）
 
