@@ -1,0 +1,9 @@
+# 训练与导出依赖。数据管线 data/build_dataset.py 只用标准库，无需安装这些。
+transformers>=4.44
+datasets>=2.20
+torch>=2.3
+scikit-learn>=1.5
+sentencepiece>=0.2
+accelerate>=0.33
+# 导出 ONNX
+optimum[onnxruntime]>=1.21
