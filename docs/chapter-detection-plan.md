@@ -68,7 +68,35 @@ txt 文本
 桌面 Chrome 通过全链路：下载（149 个进度事件）→ WebGPU 推理 → 强制 WASM 推理 →
 Cache API 持久化 → 新 worker 二次加载 ~600ms。**待办：iOS Safari 真机验证**。
 
-## Phase 3 — 训练管线（仓库外 Python，产物回流）
+## 路线修正（2026-07-17，语料驱动）
+
+拿到真实语料（`literature-books-master`：273 txt + 85 epub）后，在其上评估规则层：
+
+- 规则层 high 置信度仅 147/273（54%），**完全未识别 96/273（35%）**，远低于计划里写的「~95%」
+- 尝试补正则接住失败样本，**一次改动修好 28 本却碰坏 13 本、另有 23 本误报爆炸**——
+  纯正则会打地鼠已被数据证实
+- 关键发现：85 个 epub 自带结构化目录（`toc.ncx`），是**独立于规则的 ground truth**，
+  这解除了 P3 原来的「训练数据死结」（自动标注只能来自自己正则）
+
+**决策：提前启动 P3，规则层冻结在高精度（P1 版本）当自动标注器 + 兜底。**
+P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）。
+
+## Phase 3 — 训练管线（`ml/` 子项目，产物回流）✅ 数据管线已验证（2026-07-17）
+
+已落地 `ml/`（Python + tsx，不进 npm 构建）：
+
+- `data/build_dataset.py`：epub → 行级标签 JSONL（prev/text/next/label）。**本机已跑通**：
+  84/85 epub 解析成功，产出 23.6 万行、7983 标题正样本、正负比 1:29。标签是语义标题
+  （「累到无力抵抗」「第1节 批《苦恋》」），正是规则接不住的那类
+- `train/train.py`：mDeBERTa-v3-base 逐行分类微调，按书划分 train/eval 防泄漏（需 GPU）
+- `export/export_onnx.py`：ONNX 导出 + int8 量化（需 optimum）
+- `eval/evalRules.ts`：规则层语料评估器（对照基线，high=147）
+- 详见 `ml/README.md`
+
+**下一步**：GPU 机器上跑 `train.py`，产出模型 → `export_onnx.py` 转 ONNX →
+放 `public/models/` → 前端 `ChapterClassifier` 换 modelId 接入（P2 设施已就绪）。
+
+## Phase 3（原始计划，保留参考）
 
 独立目录 `ml/`（不进 npm 构建）：
 
