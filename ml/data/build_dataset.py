@@ -186,6 +186,7 @@ def main() -> int:
             if r["label"] == 1 and len(pos_samples) < 30:
                 pos_samples.append(r["text"])
 
+    # 保留全部负样本；负样本降采样在 train.py 的训练集上做，验证集保持自然分布
     pos = sum(r["label"] for r in all_records)
     neg = len(all_records) - pos
     print(f"\n解析成功 {parsed} 本, 跳过 {skipped} 本（无目录/损坏）")

@@ -66,6 +66,25 @@ def split_by_book(records: list[dict], holdout_frac: float = 0.15) -> tuple[list
     return train, dev
 
 
+def subsample_negatives(records: list[dict], neg_ratio: float, seed: int = 42) -> list[dict]:
+    """
+    负样本降采样：保留全部正样本，随机保留 neg_ratio×正样本数 的负样本。
+    只用于训练集——1:29 的极端不平衡会让模型退化成「全判非标题」（冒烟测试已验证 f1=0）；
+    降到约 1:5 训练更快、能真正学到标题特征。验证集不动，保持自然分布以诚实评估。
+    """
+    import random
+
+    rng = random.Random(seed)
+    pos = [r for r in records if r["label"] == 1]
+    neg = [r for r in records if r["label"] == 0]
+    keep = int(len(pos) * neg_ratio)
+    if keep >= len(neg):
+        return records
+    out = pos + rng.sample(neg, keep)
+    rng.shuffle(out)
+    return out
+
+
 def compute_metrics(pred) -> dict:
     logits, labels = pred
     preds = np.argmax(logits, axis=-1)
@@ -80,6 +99,12 @@ def main() -> int:
     ap.add_argument("--epochs", type=float, default=3.0)
     ap.add_argument("--batch", type=int, default=32)
     ap.add_argument("--limit", type=int, default=0, help="冒烟测试：只用前 N 本书，验证链路是否跑通")
+    ap.add_argument(
+        "--neg-ratio",
+        type=float,
+        default=5.0,
+        help="训练集负样本降采样目标比例（负:正=N:1），缓解 1:29 不平衡。0 表示不降采样",
+    )
     args = ap.parse_args()
 
     records = dedupe(load_records(Path(args.data)))
@@ -91,7 +116,13 @@ def main() -> int:
         train_recs = [r for r in train_recs if r["book"] in set(train_books)]
         dev_recs = [r for r in dev_recs if r["book"] in set(dev_books)]
         print(f"[冒烟测试] 限制到 {len(train_books)} 训练本 / {len(dev_books)} 验证本")
-    print(f"训练 {len(train_recs)} 行, 验证 {len(dev_recs)} 行")
+    if args.neg_ratio > 0:
+        before = len(train_recs)
+        train_recs = subsample_negatives(train_recs, args.neg_ratio)
+        print(f"训练集负样本降采样: {before} → {len(train_recs)} 行 (目标 1:{args.neg_ratio:g})")
+    train_pos = sum(r["label"] for r in train_recs)
+    dev_pos = sum(r["label"] for r in dev_recs)
+    print(f"训练 {len(train_recs)} 行(正 {train_pos}), 验证 {len(dev_recs)} 行(正 {dev_pos}, 保持自然分布)")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
