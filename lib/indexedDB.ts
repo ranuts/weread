@@ -29,6 +29,11 @@ export class WebDB {
       request.onsuccess = () => {
         this.database = request.result;
         this.version = this.database.version;
+        // 其他连接（新标签页/worker）请求更高版本时主动断开，避免阻塞升级
+        this.database.onversionchange = () => {
+          this.database?.close();
+          this.database = undefined;
+        };
         resolve({
           status: 'success',
           data: {
@@ -71,6 +76,10 @@ export class WebDB {
         // 在这里创建 ObjectStore
         if (this.database && !this.database.objectStoreNames.contains('books_info')) {
           this.database.createObjectStore('books_info', { keyPath: 'id' });
+        }
+        // v2：章节识别结果缓存，key 为书籍 id
+        if (this.database && !this.database.objectStoreNames.contains('books_chapters')) {
+          this.database.createObjectStore('books_chapters', { keyPath: 'id' });
         }
         resolve({
           status: 'success',

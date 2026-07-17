@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { debounce, getQuery } from 'ranuts/utils';
 import { getBookById } from '@/store/books';
+import { resolveBookChapters } from '@/store/chapters';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
 import type { BookInfo } from '@/store/books';
 import type { TextSyntaxTree } from '@/lib/transformText';
@@ -110,13 +111,17 @@ export const DesktopBookDetail = (): React.JSX.Element => {
         } else {
           setCurrentBookDetail(res.data);
           const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
-            content,
-            title,
-            container: showContainerRef.current!,
+          // 章节结果优先走 IndexedDB 缓存，未命中时识别并写入缓存
+          resolveBookChapters(id, content).then((bookChapters) => {
+            const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
+              content,
+              title,
+              container: showContainerRef.current!,
+              chapters: bookChapters.chapters,
+            });
+            setTextSyntaxTree(textSyntaxTree);
+            ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
           });
-          setTextSyntaxTree(textSyntaxTree);
-          ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
       })
       .catch((error) => {
@@ -237,13 +242,17 @@ export const MobileBookDetail = (): React.JSX.Element => {
         } else {
           setCurrentBookDetail(res.data);
           const { content, title } = res.data;
-          const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
-            content,
-            title,
-            container: showContainerRef.current!,
+          // 章节结果优先走 IndexedDB 缓存，未命中时识别并写入缓存
+          resolveBookChapters(id, content).then((bookChapters) => {
+            const textSyntaxTree: TextSyntaxTree = transformTextToExpectedFormat({
+              content,
+              title,
+              container: showContainerRef.current!,
+              chapters: bookChapters.chapters,
+            });
+            setTextSyntaxTree(textSyntaxTree);
+            ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
           });
-          setTextSyntaxTree(textSyntaxTree);
-          ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
         }
       })
       .catch((error) => {

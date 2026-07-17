@@ -18,18 +18,30 @@ export interface ValidatedChapter {
   start: number;
 }
 
+/** 全局验证的完整结果，familyId/contiguity 等细节供置信度评估使用 */
+export interface ChapterValidation {
+  chapters: ValidatedChapter[];
+  /** 胜出家族，无家族胜出（仅特殊章节或识别失败）时为 null */
+  familyId: string | null;
+  /** 胜出家族相邻编号恰好 +1 的比例（0-1），无编号家族为 0 */
+  contiguity: number;
+  /** 全部候选行数（含被剔除的） */
+  candidateCount: number;
+}
+
 interface FamilyResult {
   familyId: string;
   kept: Candidate[];
+  contiguity: number;
   score: number;
 }
 
 /**
- * 全局验证：按家族分组竞争，编号家族用「最长递增子序列 + 间距过滤」剔除误报，
+ * 全局验证：按家族分组竞争，编号家族用「间距过滤 + 最长递增子序列」剔除误报，
  * 选得分最高的家族作为主模式，再把特殊章节（序章/番外/后记）并入结果。
- * 没有任何家族胜出时返回空数组，由调用方走兜底逻辑。
+ * 没有任何家族胜出时 chapters 为空数组，由调用方走兜底逻辑。
  */
-export const selectChapters = (candidates: Candidate[], textLength: number): ValidatedChapter[] => {
+export const validateCandidates = (candidates: Candidate[], textLength: number): ChapterValidation => {
   const specials = candidates.filter((item) => item.special);
   const regulars = candidates.filter((item) => !item.special);
 
@@ -54,15 +66,31 @@ export const selectChapters = (candidates: Candidate[], textLength: number): Val
   const accepted = best ? [...best.kept] : [];
   mergeSpecials(accepted, specials);
 
+  const rejected: ChapterValidation = {
+    chapters: [],
+    familyId: null,
+    contiguity: 0,
+    candidateCount: candidates.length,
+  };
   if (accepted.length < 2) {
-    return [];
+    return rejected;
   }
   // 结果不应挤在文本的极小前缀里（如仅命中开头的目录页），要求覆盖到文本中段
   const last = accepted[accepted.length - 1];
   if (textLength > 0 && last.start < textLength * 0.3) {
-    return [];
+    return rejected;
   }
-  return accepted.map((item) => ({ title: item.title, start: item.start }));
+  return {
+    chapters: accepted.map((item) => ({ title: item.title, start: item.start })),
+    familyId: best?.familyId ?? null,
+    contiguity: best?.contiguity ?? 0,
+    candidateCount: candidates.length,
+  };
+};
+
+/** 兼容入口：只要章节列表 */
+export const selectChapters = (candidates: Candidate[], textLength: number): ValidatedChapter[] => {
+  return validateCandidates(candidates, textLength).chapters;
 };
 
 const evaluateFamily = (familyId: string, group: Candidate[]): FamilyResult | null => {
@@ -79,7 +107,7 @@ const evaluateFamily = (familyId: string, group: Candidate[]): FamilyResult | nu
   const contiguity = numbered ? contiguityScore(kept) : 0;
   const weight = FAMILY_WEIGHTS[familyId] ?? 0.5;
   const score = kept.length * (0.6 + 0.4 * contiguity) * weight;
-  return { familyId, kept, score };
+  return { familyId, kept, contiguity, score };
 };
 
 /**

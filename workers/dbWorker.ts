@@ -191,6 +191,11 @@ const getDatabase = (dbName: string): Promise<IDBDatabase> => {
     request.onsuccess = () => {
       db = request.result;
       dbPromise = null;
+      // 主线程请求版本升级时主动断开，下次操作会按新版本重开
+      db.onversionchange = () => {
+        db?.close();
+        db = null;
+      };
       resolve(db);
     };
 

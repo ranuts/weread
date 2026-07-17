@@ -1,7 +1,8 @@
 import { WebDB } from '@/lib/indexedDB';
 import { createBookStore } from '@/store/books';
 
-export const db = new WebDB({ dbName: 'read' });
+// v2 新增 books_chapters（章节识别结果缓存）
+export const db = new WebDB({ dbName: 'read', version: 2 });
 
 export const initDB = (): void => {
   db.openDataBase().then((result) => {

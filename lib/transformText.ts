@@ -359,17 +359,25 @@ export const transformTextToExpectedFormat = ({
   content,
   container,
   title,
+  chapters,
 }: {
   content: ArrayBuffer | Uint8Array<ArrayBuffer>;
   container: HTMLElement;
   title: string;
+  /** 预计算的章节（来自缓存或模型增强），传入时跳过内部识别；空数组表示已确认无章节 */
+  chapters?: ChapterItem[];
 }): TextSyntaxTree => {
   // 1. 过滤空格换行
   const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
-  // 2. 提取章节标题：优先 <caption-title> 标注，无标注的原始 txt 走自动识别
-  let extractedChapters: ChapterItem[] = extractCaptionTitleChapters(text);
-  if (extractedChapters.length === 0) {
-    extractedChapters = detectChapters(text);
+  // 2. 提取章节标题：优先使用预计算结果，其次 <caption-title> 标注，最后规则自动识别
+  let extractedChapters: ChapterItem[];
+  if (chapters) {
+    extractedChapters = chapters;
+  } else {
+    extractedChapters = extractCaptionTitleChapters(text);
+    if (extractedChapters.length === 0) {
+      extractedChapters = detectChapters(text);
+    }
   }
   // 3. 把文本按章节划分
   const sections: Section[] = [];

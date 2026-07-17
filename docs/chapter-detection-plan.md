@@ -83,13 +83,19 @@ Cache API 持久化 → 新 worker 二次加载 ~600ms。**待办：iOS Safari �
 
 **验收**：held-out 集上行分类 F1 显著高于纯规则候选层；zh/en 微调后日语零样本可用。
 
-## Phase 4 — 集成与数据回流
+## Phase 4 — 集成与数据回流（模型无关部分 ✅ 2026-07-17）
 
-- 决策流水线落地：规则候选 →（低置信度时）模型增强 → 全局验证 → 兜底
-- 解析结果持久化到 IndexedDB（复用 `lib/indexedDB.ts`），一本书只解析一次
-- 目录手动编辑 UI：用户可增删改章节点；**用户修正即标注数据**，本地留存，
-  （可选、需用户同意）匿名回传作为下一轮训练语料
-- i18n：新增文案走 `locales/`
+- ✅ 置信度信号：`detectChaptersDetailed` 输出 high/medium/low/none + 胜出家族 id，
+  作为后续模型增强的触发依据（high 直接用；low/none 提示增强）
+- ✅ 解析结果持久化：`books_chapters` store（DB v2），`store/chapters.ts` 的
+  `resolveBookChapters` 编排「缓存 → caption 标注 → 规则识别 → 写缓存」，
+  `CHAPTER_ALGO_VERSION` 变更时自动失效重算（manual 修正除外）；阅读页双端已接线
+- ✅ 附带修复：WebDB / dbWorker 连接补上 `onversionchange` 自动断开——否则任何
+  DB 版本升级都会被旧连接（worker 或其他标签页）永久阻塞
+- ⬜ 模型增强接线：low/none 置信度时提示用户下载模型增强解析（依赖 P3 真模型）
+- ⬜ 目录手动编辑 UI：用户可增删改章节点；**用户修正即标注数据**（source: manual），
+  本地留存，（可选、需用户同意）匿名回传作为下一轮训练语料
+- ⬜ i18n：新增文案走 `locales/`
 
 ## 里程碑与顺序
 

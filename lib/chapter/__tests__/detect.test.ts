@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectChapters, parseChineseNumber, parseRomanNumber } from '../index';
+import { detectChapters, detectChaptersDetailed, parseChineseNumber, parseRomanNumber } from '../index';
 
 /** 中文正文填充：短句行，不命中任何标题模式 */
 const filler = (chars: number): string => {
@@ -142,6 +142,49 @@ describe('detectChapters 抗噪与兜底', () => {
   it('章节只挤在文本开头的极小前缀时判定失败', () => {
     const text = ['第一章 开头', filler(220), '第二章 然后', filler(220), filler(5000)].join('\n');
     expect(detectChapters(text)).toEqual([]);
+  });
+});
+
+describe('detectChaptersDetailed 置信度', () => {
+  it('编号连贯的书为 high', () => {
+    const text = [filler(300), '第一章 起点', filler(400), '第二章 转折', filler(400), '第三章 结局', filler(400)].join(
+      '\n',
+    );
+    const detection = detectChaptersDetailed(text);
+    expect(detection.confidence).toBe('high');
+    expect(detection.familyId).toBe('cn-chapter');
+  });
+
+  it('无格式文本为 none', () => {
+    const detection = detectChaptersDetailed(filler(2000));
+    expect(detection.confidence).toBe('none');
+    expect(detection.chapters).toEqual([]);
+  });
+
+  it('少于 3 章为 low', () => {
+    const text = [filler(300), '第一章 起点', filler(400), '第二章 结局', filler(400)].join('\n');
+    const detection = detectChaptersDetailed(text);
+    expect(detection.chapters).toHaveLength(2);
+    expect(detection.confidence).toBe('low');
+  });
+
+  it('编号断裂一半为 medium', () => {
+    const text = [
+      filler(300),
+      '第一章 起点',
+      filler(400),
+      '第二章 前行',
+      filler(400),
+      '第四章 迷途',
+      filler(400),
+      '第五章 转折',
+      filler(400),
+      '第七章 结局',
+      filler(400),
+    ].join('\n');
+    const detection = detectChaptersDetailed(text);
+    expect(detection.chapters).toHaveLength(5);
+    expect(detection.confidence).toBe('medium');
   });
 });
 
