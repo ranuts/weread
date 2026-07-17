@@ -427,7 +427,8 @@ export const transformTextToExpectedFormat = ({
   sequences.forEach((item) => {
     totalPage += item.result.program.length;
     item.result.program.forEach((page) => {
-      if (!titleIdPage[item.titleId]) {
+      // 必须与 undefined 比较：首章首页的页码是 0，用 falsy 判断会被当成未赋值而指向第 2 页
+      if (titleIdPage[item.titleId] === undefined) {
         titleIdPage[item.titleId] = pageText.length;
       }
       pageTitleId.push(item.titleId);
