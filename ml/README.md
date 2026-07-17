@@ -31,10 +31,15 @@ cd data
 python3 build_dataset.py /path/to/corpus --out out/dataset.jsonl
 # 加 --report 只统计不写文件
 
-# 2. 微调（需 GPU 机器）
-cd ../train
-pip install -r ../requirements.txt
-python3 train.py --data ../data/out/dataset.jsonl --out out/model
+# 2. 微调（需 GPU 机器；Mac 用 Apple MPS 也能跑，慢些）
+#    注意：需 Python 3.11/3.12（torch 无 3.13/3.14 wheel）；本机 python3 是 3.14 时用 venv：
+cd ..
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+# 先冒烟测试确认链路通（只用少量书）：
+.venv/bin/python train/train.py --data data/out/dataset.jsonl --limit 5 --epochs 1
+# 再跑完整训练：
+.venv/bin/python train/train.py --data data/out/dataset.jsonl --out train/out/model
 
 # 3. 导出浏览器 ONNX（需装 optimum 的机器）
 cd ../export

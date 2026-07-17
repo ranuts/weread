@@ -1,4 +1,8 @@
 # 训练与导出依赖。数据管线 data/build_dataset.py 只用标准库，无需安装这些。
+#
+# 需 Python 3.11 或 3.12（torch 尚无 3.13/3.14 wheel）。本机 python3 若是 3.14，用：
+#   python3.11 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
+#   .venv/bin/python train/train.py --data data/out/dataset.jsonl
 transformers>=4.44
 datasets>=2.20
 torch>=2.3
