@@ -96,9 +96,11 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
     ap.add_argument("--out", default="out/model")
-    ap.add_argument("--epochs", type=float, default=3.0)
-    ap.add_argument("--batch", type=int, default=32)
+    ap.add_argument("--epochs", type=float, default=2.0)
+    ap.add_argument("--batch", type=int, default=16)
+    ap.add_argument("--lr", type=float, default=2e-5, help="学习率。DeBERTa-v3 微调不稳，发散时调低到 1e-5")
     ap.add_argument("--limit", type=int, default=0, help="冒烟测试：只用前 N 本书，验证链路是否跑通")
+    ap.add_argument("--eval-limit", type=int, default=0, help="只在前 N 行验证集上评估（开发期加速），0 为全量")
     ap.add_argument(
         "--neg-ratio",
         type=float,
@@ -120,9 +122,18 @@ def main() -> int:
         before = len(train_recs)
         train_recs = subsample_negatives(train_recs, args.neg_ratio)
         print(f"训练集负样本降采样: {before} → {len(train_recs)} 行 (目标 1:{args.neg_ratio:g})")
+    if args.eval_limit and len(dev_recs) > args.eval_limit:
+        # 开发期加速：保留全部正样本 + 抽负样本到上限，仍偏自然分布但评估更快
+        import random
+
+        rng = random.Random(0)
+        dev_pos_recs = [r for r in dev_recs if r["label"] == 1]
+        dev_neg_recs = [r for r in dev_recs if r["label"] == 0]
+        keep_neg = max(0, args.eval_limit - len(dev_pos_recs))
+        dev_recs = dev_pos_recs + rng.sample(dev_neg_recs, min(keep_neg, len(dev_neg_recs)))
     train_pos = sum(r["label"] for r in train_recs)
     dev_pos = sum(r["label"] for r in dev_recs)
-    print(f"训练 {len(train_recs)} 行(正 {train_pos}), 验证 {len(dev_recs)} 行(正 {dev_pos}, 保持自然分布)")
+    print(f"训练 {len(train_recs)} 行(正 {train_pos}), 验证 {len(dev_recs)} 行(正 {dev_pos})")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
@@ -154,7 +165,7 @@ def main() -> int:
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model="f1",
-        learning_rate=2e-5,
+        learning_rate=args.lr,
         warmup_ratio=0.1,
         # 类别不平衡（约 1:29）：靠更长训练 + F1 选优；如需可换带 class_weight 的自定义 loss
         logging_steps=50,
