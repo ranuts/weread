@@ -79,10 +79,18 @@ def main() -> int:
     ap.add_argument("--out", default="out/model")
     ap.add_argument("--epochs", type=float, default=3.0)
     ap.add_argument("--batch", type=int, default=32)
+    ap.add_argument("--limit", type=int, default=0, help="冒烟测试：只用前 N 本书，验证链路是否跑通")
     args = ap.parse_args()
 
     records = dedupe(load_records(Path(args.data)))
     train_recs, dev_recs = split_by_book(records)
+    if args.limit:
+        # 各取若干本书的样本快速验证端到端，不追求效果
+        train_books = list(dict.fromkeys(r["book"] for r in train_recs))[: args.limit]
+        dev_books = list(dict.fromkeys(r["book"] for r in dev_recs))[: max(1, args.limit // 4)]
+        train_recs = [r for r in train_recs if r["book"] in set(train_books)]
+        dev_recs = [r for r in dev_recs if r["book"] in set(dev_books)]
+        print(f"[冒烟测试] 限制到 {len(train_books)} 训练本 / {len(dev_books)} 验证本")
     print(f"训练 {len(train_recs)} 行, 验证 {len(dev_recs)} 行")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
