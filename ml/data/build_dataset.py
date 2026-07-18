@@ -162,13 +162,36 @@ def build_records(epub: Epub, book_id: str) -> list[dict]:
 
 
 # 高精度章节行正则（弱标注用）。英文 Gutenberg 格式规整，误报率极低；
-# 中文只收「第X章」这类强标记，纯语义标题留给 epub 真值，不在 txt 里猜。
+# 中文收「第X章/回」以及**锚点式文学回目**——第X回 + 空格 + 短语（射雕「第一回 风雪惊变」）、
+# 中文数字 + 空格 + 短语（天龙「一 青衫磊落险峰行」）。后者靠 parse_txt_weak 的序列+跨度校验滤噪。
+# 无锚点的纯裸短语（累到无力抵抗）不在 txt 里猜，留给 epub 真值。
 _ROMAN = r"[ivxlcdm]{1,7}"
+_CN = r"零一二两三四五六七八九十百千"  # 中文数字字符（不含括号）
+_SP = r"[ 　]"  # 半角或全角空格
 CHAPTER_RE = re.compile(
-    rf"^\s*(?:(?:chapter|part|book|section)\s+(?:\d{{1,4}}|{_ROMAN})"
-    rf"|第\s*[0-9零一二两三四五六七八九十百千]{{1,8}}\s*[章节節回卷])\b",
+    rf"^\s*(?:"
+    rf"(?:chapter|part|book|section)\s+(?:\d{{1,4}}|{_ROMAN})"  # 英文
+    rf"|第\s*[0-9{_CN}]{{1,8}}\s*[章节節回卷]"  # 第X章/回（可带短语）
+    rf"|[{_CN}]{{1,3}}{_SP}+\S{{2,}}"  # 中文数字 + 空格 + 短语（天龙式回目）
+    rf")",
     re.IGNORECASE,
 )
+
+
+def decode_txt(buf: bytes) -> str:
+    """稳健解码中文 txt：试 utf-8/gb18030/utf-16，取替换字符最少的（无外部依赖）。"""
+    best = None
+    for enc in ("utf-8", "gb18030", "utf-16le", "utf-16"):
+        try:
+            text = buf.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+        bad = text.count("�")
+        if bad == 0:
+            return text
+        if best is None or bad < best[1]:
+            best = (text, bad)
+    return best[0] if best else buf.decode("utf-8", "ignore")
 
 
 def parse_txt_weak(path: Path, book_id: str) -> list[dict] | None:
@@ -177,7 +200,7 @@ def parse_txt_weak(path: Path, book_id: str) -> list[dict] | None:
     否则返回 None（宁可不要，也不引入噪声标签）。正样本来自高精度正则，其余为负。
     """
     try:
-        raw = path.read_text(encoding="utf-8", errors="ignore")
+        raw = decode_txt(path.read_bytes())
     except OSError:
         return None
     lines = [normalize(l) for l in raw.splitlines()]
