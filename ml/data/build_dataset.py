@@ -159,42 +159,115 @@ def build_records(epub: Epub, book_id: str) -> list[dict]:
     return records
 
 
+# 高精度章节行正则（弱标注用）。英文 Gutenberg 格式规整，误报率极低；
+# 中文只收「第X章」这类强标记，纯语义标题留给 epub 真值，不在 txt 里猜。
+_ROMAN = r"[ivxlcdm]{1,7}"
+CHAPTER_RE = re.compile(
+    rf"^\s*(?:(?:chapter|part|book|section)\s+(?:\d{{1,4}}|{_ROMAN})"
+    rf"|第\s*[0-9零一二两三四五六七八九十百千]{{1,8}}\s*[章节節回卷])\b",
+    re.IGNORECASE,
+)
+
+
+def parse_txt_weak(path: Path, book_id: str) -> list[dict] | None:
+    """
+    对无 TOC 的 txt 做规则弱标注：只有当章节行构成足够长、基本递增的序列时才采用，
+    否则返回 None（宁可不要，也不引入噪声标签）。正样本来自高精度正则，其余为负。
+    """
+    try:
+        raw = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return None
+    lines = [normalize(l) for l in raw.splitlines()]
+    lines = [l for l in lines if l]
+    if len(lines) < 50:
+        return None
+
+    hit_idx = [i for i, l in enumerate(lines) if len(l) <= 60 and CHAPTER_RE.match(l)]
+    if len(hit_idx) < 5:
+        return None
+    # 章节行应散布全书而非挤在一处（避免命中目录页或引用），跨度需过半
+    span = (hit_idx[-1] - hit_idx[0]) / len(lines)
+    if span < 0.5:
+        return None
+
+    hit_set = set(hit_idx)
+    records = []
+    for i, line in enumerate(lines):
+        records.append(
+            {
+                "book": book_id,
+                "prev": lines[i - 1] if i > 0 else "",
+                "text": line,
+                "next": lines[i + 1] if i + 1 < len(lines) else "",
+                "label": 1 if i in hit_set else 0,
+            }
+        )
+    return records
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("corpus")
+    ap.add_argument("corpus", help="epub 语料目录（TOC 真值标签）")
+    ap.add_argument(
+        "--txt-dir",
+        action="append",
+        default=[],
+        help="额外的 txt 语料目录，用高精度规则弱标注（可多次）。适合英文 Gutenberg 等规整格式",
+    )
+    ap.add_argument("--txt-limit", type=int, default=0, help="每个 txt 目录最多采用的书数（控制训练规模），0 为不限")
     ap.add_argument("--out", default="out/dataset.jsonl")
     ap.add_argument("--report", action="store_true", help="只统计不写文件")
     args = ap.parse_args()
 
+    all_records: list[dict] = []
+    pos_samples: list[str] = []
+
+    # 1. epub：TOC 真值标签
     corpus = Path(args.corpus)
     epubs = sorted(corpus.rglob("*.epub"))
     print(f"发现 {len(epubs)} 个 epub", file=sys.stderr)
-
-    all_records: list[dict] = []
-    parsed = 0
-    skipped = 0
-    pos_samples: list[str] = []
+    epub_parsed = epub_pos = 0
     for path in epubs:
         epub = parse_epub(path)
         if epub is None:
-            skipped += 1
             continue
-        parsed += 1
+        epub_parsed += 1
         recs = build_records(epub, path.stem)
         all_records.extend(recs)
+        epub_pos += sum(r["label"] for r in recs)
         for r in recs:
-            if r["label"] == 1 and len(pos_samples) < 30:
+            if r["label"] == 1 and len(pos_samples) < 15:
                 pos_samples.append(r["text"])
 
-    # 保留全部负样本；负样本降采样在 train.py 的训练集上做，验证集保持自然分布
+    # 2. txt：高精度规则弱标注（只收章节序列清晰的书）
+    txt_parsed = txt_pos = 0
+    for d in args.txt_dir:
+        txts = sorted(Path(d).rglob("*.txt")) + sorted(Path(d).rglob("*.TXT"))
+        print(f"{d}: 发现 {len(txts)} 个 txt", file=sys.stderr)
+        seen_ids: set[str] = set()
+        for path in txts:
+            if args.txt_limit and txt_parsed >= args.txt_limit:
+                break
+            book_id = f"txt:{path.stem}"
+            if book_id in seen_ids:
+                continue
+            seen_ids.add(book_id)
+            recs = parse_txt_weak(path, book_id)
+            if recs is None:
+                continue
+            txt_parsed += 1
+            all_records.extend(recs)
+            txt_pos += sum(r["label"] for r in recs)
+
     pos = sum(r["label"] for r in all_records)
     neg = len(all_records) - pos
-    print(f"\n解析成功 {parsed} 本, 跳过 {skipped} 本（无目录/损坏）")
+    print(f"\nepub 采用 {epub_parsed} 本（正 {epub_pos}） | txt 弱标注采用 {txt_parsed} 本（正 {txt_pos}）")
     print(f"总行数 {len(all_records)}  正样本(标题) {pos}  负样本 {neg}")
     if all_records:
         print(f"正样本占比 {pos / len(all_records) * 100:.2f}%  正负比 1:{neg / max(pos, 1):.0f}")
-    print("\n正样本示例（这些正是规则正则接不住的语义标题）:")
-    for s in pos_samples[:25]:
+    print("\nepub 正样本示例（语义标题）:")
+    for s in pos_samples[:12]:
         print("  +", repr(s))
 
     if not args.report:
