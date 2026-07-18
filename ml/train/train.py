@@ -32,7 +32,9 @@ from transformers import (
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from textfeat import make_text  # noqa: E402
 
-MODEL_ID = "microsoft/mdeberta-v3-base"
+# 默认多语言 base；按语言分模型时用 --base 换成 bert-base-chinese / MiniLM 等
+# （标准注意力骨干 int8 量化友好，避开 DeBERTa-v3 的量化崩溃，见 docs/chapter-model-deployment.md 2.3）
+DEFAULT_BASE = "microsoft/mdeberta-v3-base"
 MAX_LEN = 128
 # 正类标签需与前端 lib/nlp/index.ts 的 DEFAULT_POSITIVE_LABEL 保持一致
 LABELS = ["not_title", "title"]
@@ -98,6 +100,7 @@ def compute_metrics(pred) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
+    ap.add_argument("--base", default=DEFAULT_BASE, help="预训练 base，如 bert-base-chinese（标准注意力，int8 友好）")
     ap.add_argument("--out", default="out/model")
     ap.add_argument("--epochs", type=float, default=2.0)
     ap.add_argument("--batch", type=int, default=16)
@@ -138,7 +141,7 @@ def main() -> int:
     dev_pos = sum(r["label"] for r in dev_recs)
     print(f"训练 {len(train_recs)} 行(正 {train_pos}), 验证 {len(dev_recs)} 行(正 {dev_pos})")
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
+    tokenizer = AutoTokenizer.from_pretrained(args.base)
 
     def encode(batch):
         texts = [
@@ -154,7 +157,7 @@ def main() -> int:
     dev_ds = Dataset.from_list(dev_recs).map(encode, batched=True, remove_columns=cols)
 
     model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_ID,
+        args.base,
         num_labels=len(LABELS),
         id2label=dict(enumerate(LABELS)),
         label2id={label: i for i, label in enumerate(LABELS)},
