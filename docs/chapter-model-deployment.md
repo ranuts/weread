@@ -89,6 +89,16 @@ mDeBERTa 的体积里近 2/3 是 25 万 token 的多语言 embedding。裁到实
 > - 产物：`ml/train/out/model_zh`、`ml/export/out/zh/model_quantized.onnx`、部署于 `public/models/chapter-title-zh/`。
 > - **经验**：「量化友好」和「够强」是两个维度——bert-base-chinese 占前者不占后者，DeBERTa-v3 反之，chinese-roberta-wwm-ext 两者兼得。选 base 要同时验证这两点。
 
+> **✅ 英文版跑通（2026-07-19）**：`distilbert-base-uncased`（6 层，更小）→ eval recall 0.94（英文标题规整）。
+> **int8 与 fp32 在真实 dev 数据上逐一相同**（Chapter N - Title 0.999），**67MB**。浏览器端到端：英文书自动
+> 检测 en → 加载 chapter-title-en（WebGPU）→ 4 章全识别 763ms。产物 `ml/train/out/model_en`、
+> `ml/export/out/en`、`public/models/chapter-title-en/`；已在 `lib/nlp/detectLanguage.ts` MODEL_BY_LANG 注册 en。
+> 注意：英文标题格式规整、规则覆盖本就好，英文模型边际价值小于中文（中文有金庸空格回目规则完全接不住）。
+
+**前端接入（已落地）**：`detectLanguage`（CJK/拉丁占比）自动选模型 → `detectChaptersWithModel`
+（预过滤短+非句末标点行，模型标题作无编号家族 union 规则 → validate.ts 竞争过滤）→ 置信度门控 UI
+（规则 low/none 才显「AI 增强」，懒加载模型 + 进度，结果缓存 source:'model'）。见 [journey 9.9](./chapter-detection-journey.md)。
+
 **为什么这条路更好**——体积的病根有两个（词表大 + 骨干是 DeBERTa-v3 不好量化），按语言分 + 换骨干**一次解决两个**：
 
 |             | 多语言 mDeBERTa-v3               | 中文版 bert-base-chinese | 中文版 MiniLM-L6 |
