@@ -79,6 +79,16 @@ mDeBERTa 的体积里近 2/3 是 25 万 token 的多语言 embedding。裁到实
 
 **决策（2026-07-18）**：不再走「裁剪那个多语言 mDeBERTa」的路，改为**按语言训练多个小模型，页面按需加载**；多语言 mDeBERTa v3 保留作兜底。
 
+> **✅ 已验证成立（2026-07-18）——中文版跑通端到端**：
+>
+> - base 选型踩了一步：**bert-base-chinese 太弱**（recall 0.43，连「第一章 风雪夜」都判 0.02，只认高频词「后记」——弱 base 只记忆不泛化）；换 **chinese-roberta-wwm-ext** 后结构化标题全部拿下（第一章 0.948、第二章 0.956、后记 0.957），eval recall 0.81。
+> - **int8 量化不崩**（决定性判据）：roberta int8 后第一章 0.921（fp32 0.948，掉点微乎其微），对照 DeBERTa-v3 的 int8 第一章 0.01（取反崩溃）。**证明「标准注意力 int8 友好」这个核心假设成立**。
+> - **体积 103MB**（v3 是坏掉的 338MB）。
+> - **浏览器 onnxruntime-web int8 实测一致**：第一章 0.917、第二章 0.939、后记 0.953、正文 0.001，与 Python 一致。
+> - 唯一弱点：裸金庸短语（去数字前缀的「青衫磊落险峰行」）0.21，比 v3 的 0.945 弱；但真实武侠回目带数字前缀（「一 青衫磊落险峰行」）能接住，结构化书（绝大多数）完美。
+> - 产物：`ml/train/out/model_zh`、`ml/export/out/zh/model_quantized.onnx`、部署于 `public/models/chapter-title-zh/`。
+> - **经验**：「量化友好」和「够强」是两个维度——bert-base-chinese 占前者不占后者，DeBERTa-v3 反之，chinese-roberta-wwm-ext 两者兼得。选 base 要同时验证这两点。
+
 **为什么这条路更好**——体积的病根有两个（词表大 + 骨干是 DeBERTa-v3 不好量化），按语言分 + 换骨干**一次解决两个**：
 
 |             | 多语言 mDeBERTa-v3               | 中文版 bert-base-chinese | 中文版 MiniLM-L6 |
