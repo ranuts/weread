@@ -39,9 +39,11 @@ def main() -> int:
     model.save_pretrained(out)
     AutoTokenizer.from_pretrained(args.model).save_pretrained(out)
 
-    # 2. int8 动态量化（avx512 配置，兼容大多数 CPU；WebGPU 侧仍可用量化权重）
+    # 2. int8 动态量化。**per_channel=True 必须开**：DeBERTa-v3 对量化敏感，
+    #    per_channel=False 会让量化模型输出错乱（v3 实测 logits 几乎取反、title 概率反向）。
+    #    逐通道量化精度高得多，正好修这种退化。
     quantizer = ORTQuantizer.from_pretrained(out)
-    qconfig = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=False)
+    qconfig = AutoQuantizationConfig.avx512_vnni(is_static=False, per_channel=True)
     quantizer.quantize(save_dir=out, quantization_config=qconfig)
 
     print(f"导出完成: {out}")
