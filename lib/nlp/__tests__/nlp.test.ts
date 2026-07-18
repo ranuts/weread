@@ -78,7 +78,7 @@ describe('ChapterClassifier 协议', () => {
     expect(worker.sent[0]).toMatchObject({ type: 'load', modelId: 'test/model' });
   });
 
-  it('classifyLines：按 LABEL_1 映射为标题概率', async () => {
+  it('classifyLines：按 title 标签映射为标题概率', async () => {
     const { classifier, worker } = createClassifier();
     const promise = classifier.classifyLines(['第一章 起点', '正文内容']);
 
@@ -88,12 +88,12 @@ describe('ChapterClassifier 协议', () => {
       type: 'result',
       scores: [
         [
-          { label: 'LABEL_0', score: 0.1 },
-          { label: 'LABEL_1', score: 0.9 },
+          { label: 'not_title', score: 0.1 },
+          { label: 'title', score: 0.9 },
         ],
         [
-          { label: 'LABEL_0', score: 0.8 },
-          { label: 'LABEL_1', score: 0.2 },
+          { label: 'not_title', score: 0.8 },
+          { label: 'title', score: 0.2 },
         ],
       ],
     });
