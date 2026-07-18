@@ -266,11 +266,35 @@ epub 的目录是出版商/制作者手工确定的真实章节结构，和「�
 - 全部走 `ml/.gitignore`（`train/out/`、`export/out/`、`data/out/`、`.venv/`、`*.jsonl`），**模型和数据集绝不进 git**。
 - **经验**：训练前就把产物目录加进 gitignore，别等 `git status` 里冒出 1GB 文件才补。定期清 checkpoint。
 
-### 9.7 ONNX 导出与量化
+### 9.7 ONNX 导出与量化（DeBERTa-v3 的 int8 血泪）
 
 - 用 `optimum[onnxruntime]` 导出 + int8 动态量化，optimum 2.1 上脚本直接可用。
-- **量化不损伤判别力**：验证量化后 ONNX 预测与 PyTorch 一致（标题 0.92-0.98、正文 0.002），用**浏览器同款 onnxruntime** 加载 `model_quantized.onnx` 复核，而不是只信 PyTorch。
-- **经验**：量化后必须用**部署时的运行时**（这里是 onnxruntime，不是 PyTorch）复核几个样本，int8 偶尔会显著掉点，早发现。
+- **v3 的 int8 量化坏了**：导出 v3 时我没重验量化模型（只验过 v1/v2），直到浏览器接入才发现——
+  int8 的 logits 几乎取反（第一章 title=0.01，per_channel=True 也只到 0.45）。fp32 正确、int8 崩。
+  根因：**DeBERTa-v3 的 disentangled attention 对 int8 动态量化本质不友好**（社区已知）。
+- **经验**：量化后**必须用部署运行时（onnxruntime-web / 浏览器）复核量化模型本身**，别只信 PyTorch，
+  也别因为「上个版本没事」就跳过——量化对不同架构差异极大（同 int8，RoFormer 没事、DeBERTa-v3 崩）。
+  这个疏忽让我白导出一轮。详见 [部署文档 2.0](./chapter-model-deployment.md)。
+
+### 9.8 浏览器接入：链路全通，踩平三坑，撞上量化墙
+
+把 v3 接进浏览器（transformers.js + onnxruntime-web），**fp32 端到端证明正确**：结构化 0.992、
+金庸回目 0.914、正文 0.000，与 PyTorch 完全一致；token id 也逐字比对一致。过程踩平三个真坑：
+
+1. **`env.localModelPath` 必须是绝对路径不是绝对 URL**：写成 `http://.../models/` 时，transformers.js
+   的存在性检查（`get_file_metadata`）把它当远端，配合 `allowRemoteModels=false` 就判成「文件不存在」
+   → tokenizer 配置返回 undefined → 崩。改用 `.pathname`（`/weread/models/`）本地分支才生效。
+2. **pipeline 在 DeBERTa-v2 tokenizer 上报 `this.tokenizer is not a function`**：改用
+   `AutoTokenizer + AutoModelForSequenceClassification + 手动 softmax`，绕开 pipeline 抽象。
+3. **多个 `[SEP]` 让分词器给出非零 token_type_ids**，与训练时（单串输入全 0）不一致；mDeBERTa 本就
+   不用 token_type_ids，删掉更稳。
+
+**结论**：除体积外一切都通。int8 崩（9.7）、fp16 转换有图型 bug、fp32 正确但 1.1GB（其中 771MB 是
+25.1 万多语言词表嵌入，占 69%）。→ **选定新方向：按语言训小模型 + 换标准注意力骨干**（同时解决体积与
+量化，见 [部署文档 2.3](./chapter-model-deployment.md)）。
+
+> **经验 16**：**「模型训好」离「能上线」还有一整个部署层**——量化、运行时兼容、路径解析、tokenizer
+> 特殊字段，每一步都可能静默出错且只在真实运行时暴露。端到端在**目标运行时**里验证，比任何离线指标都重要。
 
 ---
 
@@ -283,6 +307,8 @@ epub 的目录是出版商/制作者手工确定的真实章节结构，和「�
 | 模型 v2（+格式特征+多语言，完整验证集）        | **0.90**  | 0.24                | 高召回，但文学标题全挂（7.5 节）              |
 | 独立测试集（40 本训练零接触中文书）            | **0.988** | 0.21\*              | 泛化真值，排除过拟合                          |
 | **模型 v3（+武侠回目，英文降量，完整验证集）** | **0.879** | **0.339**           | **金庸回目 0.001→0.945，精度/f1 全面优于 v2** |
+
+| **v3 浏览器实测（fp32，端到端）** | — | — | 结构化 0.992 / 金庸回目 0.914 / 正文 0.000，与 PyTorch 一致 |
 
 \* 独立测试的标签来自规则（仅标「第X章」类），模型额外找出的序言/楔子/语义标题被算作假阳性，
 所以精度被低估，真实值更高。召回 0.988 是可信的关键信号——在训练与模型选择都零接触的书上
@@ -298,10 +324,23 @@ epub 的目录是出版商/制作者手工确定的真实章节结构，和「�
 
 ---
 
-## 11. 待办 / 后续方向
+## 11. 现状与后续方向
 
-- 独立测试集数字回填，若召回仍 ~0.85+ 则泛化成立。
-- 导出 ONNX → 前端候选层接入（模型输出 union 到规则候选 → `validate.ts` 结构层过滤）→ app 用金庸 / 四世同堂 / 英文书验证端到端。
-- **产品决策**：322MB 模型进 PWA 的下载成本；移动端词表裁剪版（~150MB，按 CJK+拉丁+西里尔裁剪）；懒加载策略（规则高置信度时不下模型）。
-- 进一步提召回：目录手动编辑 UI 收集用户修正（`source: manual`）作为增量标注 → 迭代飞轮。
-- 精度若仍不够被结构层消化：提高训练 neg-ratio、或阈值上调、或给 validate.ts 加更强的序列约束。
+**已完成**：规则层（P1，上线级）；数据管线（epub TOC + txt 弱标注）；模型 v3（验证集 recall 0.879 /
+金庸回目 0.945，能力边界清晰）；**浏览器端到端推理证明正确**（fp32）；懒加载/分包/部署规划成文。
+
+**当前唯一阻塞：体积**。v3 fp32 1.1GB，int8 因 DeBERTa-v3 崩、fp16 转换有 bug。
+
+**选定方向（2026-07-18）：按语言训小模型 + 换标准注意力骨干**（见 [部署文档 2.3](./chapter-model-deployment.md)）：
+
+- **中文版先做**：base `bert-base-chinese`（词表 2.1万、标准注意力 int8 友好），数据用中文 epub 7983
+  - 武侠 438。**成败判据：int8 后金庸回目仍判对**（验证「标准注意力 int8 不崩」）。目标 ~50-100MB。
+- **英文版**：MiniLM / distilbert，英文 txt 弱标注数据。
+- **其他语言按需补**；多语言 mDeBERTa v3 保留作兜底（桌面 fp32）。
+- 格式特征（`ml/textfeat.py` / `lib/nlp/features.ts`）语言无关，一套复用，零改动。
+
+**体积解决后的接入**：模型输出 union 到规则候选 → `validate.ts` 结构层过滤 → 置信度门控 UI
+（low/none 才提示「AI 增强」）→ app 用金庸 / 四世同堂 / 英文书端到端验证。衔接点见部署文档第 7 节。
+
+**长期**：目录手动编辑 UI 收集用户修正（`source: manual`）作为增量标注 → 迭代飞轮；裸口语短语标题
+（能力边界）主要靠这条路补，而非堆训练数据。
