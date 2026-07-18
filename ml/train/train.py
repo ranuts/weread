@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +28,9 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from textfeat import make_text  # noqa: E402
 
 MODEL_ID = "microsoft/mdeberta-v3-base"
 MAX_LEN = 128
@@ -52,8 +56,7 @@ def dedupe(records: list[dict]) -> list[dict]:
     return out
 
 
-def make_text(r: dict) -> str:
-    return f"{r.get('prev', '')} [SEP] {r['text']} [SEP] {r.get('next', '')}"
+# make_text/feat_tokens 来自共享模块 textfeat（前端 lib/nlp 需逐字复刻，见文件顶注释）
 
 
 def split_by_book(records: list[dict], holdout_frac: float = 0.15) -> tuple[list[dict], list[dict]]:
@@ -138,16 +141,17 @@ def main() -> int:
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
     def encode(batch):
-        enc = tokenizer(
-            [make_text({"prev": p, "text": t, "next": n}) for p, t, n in zip(batch["prev"], batch["text"], batch["next"])],
-            truncation=True,
-            max_length=MAX_LEN,
-        )
+        texts = [
+            make_text({"prev": p, "text": t, "next": n, "pos": po})
+            for p, t, n, po in zip(batch["prev"], batch["text"], batch["next"], batch["pos"])
+        ]
+        enc = tokenizer(texts, truncation=True, max_length=MAX_LEN)
         enc["labels"] = batch["label"]
         return enc
 
-    train_ds = Dataset.from_list(train_recs).map(encode, batched=True, remove_columns=["book", "prev", "text", "next", "label"])
-    dev_ds = Dataset.from_list(dev_recs).map(encode, batched=True, remove_columns=["book", "prev", "text", "next", "label"])
+    cols = ["book", "prev", "text", "next", "pos", "label"]
+    train_ds = Dataset.from_list(train_recs).map(encode, batched=True, remove_columns=cols)
+    dev_ds = Dataset.from_list(dev_recs).map(encode, batched=True, remove_columns=cols)
 
     model = AutoModelForSequenceClassification.from_pretrained(
         MODEL_ID,
