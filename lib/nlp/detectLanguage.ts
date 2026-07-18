@@ -7,8 +7,8 @@ export type BookLang = 'zh' | 'en' | 'other';
 
 /** 已训练/部署的语言专属模型；其余语言走多语言兜底或纯规则 */
 export const MODEL_BY_LANG: Partial<Record<BookLang, string>> = {
-  zh: 'chapter-title-zh',
-  // en: 'chapter-title-en',  // 待训
+  zh: 'chapter-title-zh', // chinese-roberta-wwm-ext int8 103MB
+  en: 'chapter-title-en', // distilbert-base-uncased int8 67MB
 };
 
 /**
