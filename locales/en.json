@@ -25,5 +25,9 @@
   "books-theHunchbackOfNotreDame-author": "Victor Hugo",
   "books-janeEyre-author": "Charlotte Brontë",
   "books-walden-author": "Henry David Thoreau",
-  "books-snowWhite-author": "The Brothers Grimm"
+  "books-snowWhite-author": "The Brothers Grimm",
+  "enhanceCatalogue": "Enhance with AI",
+  "enhanceHint": "Rules may miss chapters — re-detect with the AI model (downloads once)",
+  "modelDownloading": "Downloading model",
+  "modelEnhancing": "Detecting"
 }

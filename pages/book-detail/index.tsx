@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { debounce, getQuery } from 'ranuts/utils';
 import { getBookById } from '@/store/books';
-import { resolveBookChapters } from '@/store/chapters';
+import { canEnhanceWithModel, enhanceChaptersWithModel, resolveBookChapters } from '@/store/chapters';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
 import type { BookInfo } from '@/store/books';
+import type { DetectedChapter } from '@/lib/chapter';
 import type { TextSyntaxTree } from '@/lib/transformText';
 import { ROUTE_PATH } from '@/router';
 import { BookDetailOperate, MobileBookDetailOperate } from '@/components/DetailOperate';
@@ -73,11 +74,41 @@ export const DesktopBookDetail = (): React.JSX.Element => {
   const bookDetail: BookInfo = getCurrentBookDetail();
   const textSyntaxTree: TextSyntaxTree = getTextSyntaxTree();
   const pageNum: number = getPageNum();
+  // 模型增强：规则置信度低且该语言有模型时提供「AI 增强」入口
+  const contentRef = useRef<ArrayBuffer | Uint8Array<ArrayBuffer> | null>(null);
+  const ruleChaptersRef = useRef<DetectedChapter[]>([]);
+  const [canEnhance, setCanEnhance] = useState(false);
+  const [enhanceProgress, setEnhanceProgress] = useState<number | null>(null);
 
   const updateUI = () => {
     debounce(() => {
       update((prev) => prev + 1);
     }, 16)();
+  };
+
+  const runEnhance = async () => {
+    if (!id || !contentRef.current || enhanceProgress !== null) return;
+    setEnhanceProgress(0);
+    try {
+      const enhanced = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
+        onProgress: (p) => {
+          if (typeof p.progress === 'number') setEnhanceProgress(Math.round(p.progress));
+        },
+      });
+      setCanEnhance(false);
+      if (enhanced && showContainerRef.current) {
+        const tree = transformTextToExpectedFormat({
+          content: contentRef.current,
+          title: bookDetail?.title ?? '',
+          container: showContainerRef.current,
+          chapters: enhanced.chapters,
+        });
+        setTextSyntaxTree(tree);
+        setPageNum(0);
+      }
+    } finally {
+      setEnhanceProgress(null);
+    }
   };
 
   const getTitle = () => {
@@ -120,6 +151,10 @@ export const DesktopBookDetail = (): React.JSX.Element => {
               chapters: bookChapters.chapters,
             });
             setTextSyntaxTree(textSyntaxTree);
+            // 规则置信度低时，允许用户点击「AI 增强」用模型重识别
+            contentRef.current = content;
+            ruleChaptersRef.current = bookChapters.chapters;
+            setCanEnhance(canEnhanceWithModel(bookChapters));
             ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
           });
         }
@@ -156,7 +191,21 @@ export const DesktopBookDetail = (): React.JSX.Element => {
               {bookDetail?.title}
             </a>
           </div>
-          <div>
+          <div className="flex items-center gap-4">
+            {enhanceProgress !== null && (
+              <span className="text-sm text-text-color-2">
+                {enhanceProgress > 0 ? `${t('modelDownloading')} ${enhanceProgress}%` : t('modelEnhancing')}
+              </span>
+            )}
+            {canEnhance && enhanceProgress === null && (
+              <a
+                className="text-sm text-blue-500 cursor-pointer hover:text-blue-600"
+                title={t('enhanceHint')}
+                onClick={runEnhance}
+              >
+                {t('enhanceCatalogue')}
+              </a>
+            )}
             <a className="text-text-color-2 font-normal cursor-pointer hover:text-text-color-1" onClick={toHome}>
               {t('home')}
             </a>
@@ -224,6 +273,35 @@ export const MobileBookDetail = (): React.JSX.Element => {
   const totalPage: number = textSyntaxTree.totalPage;
   const pageNum: number = getPageNum();
   const { id } = getQuery();
+  const contentRef = useRef<ArrayBuffer | Uint8Array<ArrayBuffer> | null>(null);
+  const ruleChaptersRef = useRef<DetectedChapter[]>([]);
+  const [canEnhance, setCanEnhance] = useState(false);
+  const [enhanceProgress, setEnhanceProgress] = useState<number | null>(null);
+
+  const runEnhance = async () => {
+    if (!id || !contentRef.current || enhanceProgress !== null) return;
+    setEnhanceProgress(0);
+    try {
+      const enhanced = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
+        onProgress: (p) => {
+          if (typeof p.progress === 'number') setEnhanceProgress(Math.round(p.progress));
+        },
+      });
+      setCanEnhance(false);
+      if (enhanced && showContainerRef.current) {
+        const tree = transformTextToExpectedFormat({
+          content: contentRef.current,
+          title: getCurrentBookDetail()?.title ?? '',
+          container: showContainerRef.current,
+          chapters: enhanced.chapters,
+        });
+        setTextSyntaxTree(tree);
+        setPageNum(0);
+      }
+    } finally {
+      setEnhanceProgress(null);
+    }
+  };
 
   const updateUI = () => {
     debounce(() => {
@@ -251,6 +329,10 @@ export const MobileBookDetail = (): React.JSX.Element => {
               chapters: bookChapters.chapters,
             });
             setTextSyntaxTree(textSyntaxTree);
+            // 规则置信度低时，允许用户点击「AI 增强」用模型重识别
+            contentRef.current = content;
+            ruleChaptersRef.current = bookChapters.chapters;
+            setCanEnhance(canEnhanceWithModel(bookChapters));
             ref.current?.style.setProperty('view-transition-name', `book-info-${id}`);
           });
         }
