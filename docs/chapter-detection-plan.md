@@ -94,7 +94,7 @@ P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）�
 
 - `data/build_dataset.py`：epub → 行级标签 JSONL（prev/text/next/label）。**本机已跑通**：
   84/85 epub 解析成功，产出 23.6 万行、7983 标题正样本、正负比 1:29。标签是语义标题
-  （「累到无力抵抗」「第1节 批《苦恋》」），正是规则接不住的那类
+  （「累到无力抵抗」「第 1 节 批《苦恋》」），正是规则接不住的那类
 - `train/train.py`：mDeBERTa-v3-base 逐行分类微调，按书划分 train/eval 防泄漏（需 GPU）
 - `export/export_onnx.py`：ONNX 导出 + int8 量化（需 optimum）
 - `eval/evalRules.ts`：规则层语料评估器（对照基线，high=147）

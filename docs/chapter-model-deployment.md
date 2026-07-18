@@ -196,3 +196,72 @@ mDeBERTa 的体积里近 2/3 是 25 万 token 的多语言 embedding。裁到实
 - q4 相对 int8 的精度损失。
 - iOS 真机内存峰值与 OPFS 配额上限。
 - 触发率：上线第 0 层后，实际有多少书落到 low/none、多少用户点了「AI 增强」——决定后续投入。
+
+---
+
+## 九、Cloudflare 部署可行性（2026-07-19 评估）
+
+**结论：可行，但必须把「代码」与「模型」拆成两条线部署。**直接把 `dist/`（含 1GB 模型）整个推 Pages 不可行。
+
+### 9.1 app 本体 → Cloudflare Pages（原生兼容）
+
+- 构建产物是**纯静态 SSG**：`bin/build.sh` 跑 SSR bundle → `bin/build-ssg.js` 预渲染每条路由为静态 HTML → **删除 `dist/server`、`dist/client`**，`dist/` 只剩静态文件。无运行时 Node 服务器（DB / 推理全在浏览器 Worker）。→ Pages 纯静态托管即可，比现在的 GitHub Pages 更快。
+- **需改 base path**：全站硬编码 `/weread` 子路径（`vite.config.ts` `base:'/weread'`、`views/client.tsx`、`app.tsx` 的 `manifest-url`、`router` base）。CF Pages 部署在根域名要改成 `/`；保留子路径则要配 Pages 路由规则，改 base 更干净。
+
+### 9.2 模型 → Cloudflare R2（Pages 装不下）
+
+- **Pages 有 25 MiB / 单文件硬上限**。三个 onnx 全部超限：mdeberta fp32 **1.0GB**、zh int8 **99MB**、en int8 **64MB**。且 `.gitignore` 已排除 `public/models/`，git 构建根本拿不到。
+- **R2 对象存储**：无单文件限制、S3 兼容、**出网流量免费**（正适合大模型下载）。建公开 bucket / 绑自定义域，`workers/nlpWorker.ts` 的 `env.localModelPath` 或远程 host 指向 R2 URL。模型走独立发布管线，与代码解耦（顺带解决「模型不进 git」）。
+- **配套**：R2 配 CORS 允许 app 域名跨域拉 onnx；模型文件名带版本 + `Cache-Control: immutable`（配合已有 Cache API / OPFS 缓存，见第四节）。
+- **顺手删 1.0GB 的 mdeberta 兜底**：int8 崩、只能 fp32、几乎不用，放 R2 用户也不会下 1GB。R2 上只留 zh(99MB) / en(64MB)。
+
+---
+
+## 十、模型压缩：哪些有效、哪些是误区
+
+先纠一个常见误区（也是本轮提问的出发点）：
+
+> **「把模型构建成 wasm 再 gzip」是一次范畴错误。**
+> 模型是**权重（数据）**，WASM 是**运行时（代码）**。onnxruntime-web 的 `.wasm` 是*执行*模型的引擎（几 MB，那块该 gzip/brotli），模型本身不会因为「编译成 wasm」变小——权重就是权重，换个容器不改变字节量。
+
+真正能动模型体积的杠杆，按「收益 / 工作量」排序：
+
+### 10.1 传输层压缩（gzip / brotli）—— 就是问题里「再 gzip」那步
+
+- **有效但边际有限**。模型已是 **int8 量化**，量化权重接近高熵，gzip/brotli 通常只压 **~10-20%**（fp32 略好些但权重仍高熵）。
+- **brotli > gzip**，R2 可预压出 `.br` 并配 `Content-Encoding` 由浏览器透明解压。
+- **注意**：压的是*传输字节*，浏览器 / ORT 解压后**内存占用不变**（内存峰值仍是原始大小，见第五节 iOS 顾虑）。
+- 定位：**零成本叠加项**，能省点下载时间，但不是决定性杠杆。实测值应验证（int8 权重压缩率因分布而异）。
+
+### 10.2 量化深度：int8 → int4（收益最大的下一步）
+
+- 现状 int8 已是 fp32 的 4×（zh 1.1GB→103MB）。**int4 / 4-bit 权重量化**（ORT 的 `MatMulNBits`、AWQ / GPTQ 系）可再约减半：zh ~50MB、en ~32MB。
+- **precision 风险**：DeBERTa-v3 连 int8 都崩（见 2.0），但本项目已换 **标准注意力骨干（roberta / distilbert），量化友好**——int4 有较大概率扛得住，**必须实测验证**（判据同 2.3：金庸回目 / 第一章仍判对）。
+- 定位：**中等工作量、收益最大**，是压缩方向的主攻点。
+
+### 10.3 词表 / embedding 裁剪（CJK 收益小、英文尚可）
+
+- BERT/RoBERTa 的 embedding 表占参数不小（chinese-roberta ~21k 词表 × 768 ≈ 16M 参数）。裁到实际用到的 token 可省一块。
+- **但中文需广字符覆盖，裁剪空间有限**；英文 distilbert（30k 词表）相对可裁。收益中等，且要重导。
+
+### 10.4 换更小 / 更蒸馏的骨干（最大降幅，最高成本）
+
+- distilbert 已是 6 层蒸馏。可再往 MiniLM-L6 / TinyBERT / 4 层走，能再降一个档，但要**重训**（工作量最大，且要重新验证能力边界）。
+
+### 10.5 其它容器 / 格式（不改字节量，别指望减体积）
+
+- ONNX `.ort` 优化格式：加载更快，**体积基本不变**。
+- ONNX external data（图 / 权重分离）：是「先加载图、权重后到」的渐进式加载基础（见 3.3），**不减总字节**。
+
+### 压缩落地顺序建议
+
+1. **零成本先叠**：R2 上 brotli 传输压缩（~10-20%）+ 删 1GB mdeberta。
+2. **主攻 int4**：验证 roberta/distilbert int4 精度，过关则 zh/en 再减半（→ ~50MB / ~32MB，是最实在的一跳）。
+3. **英文顺带裁词表**；中文词表裁剪收益小，优先级低。
+4. **换更小骨干**：仅当 int4 后仍嫌大、且愿意重训时再上。
+
+---
+
+## 附：通用背景知识（已拆分）
+
+「模型在浏览器里怎么加载运行」与「模型文件格式概览（不止 ONNX）」是与本项目部署解耦的通用知识，已移到 [model-runtime-and-formats.md](./model-runtime-and-formats.md)。本文只保留本项目的部署工程决策。
