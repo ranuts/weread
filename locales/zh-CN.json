@@ -25,5 +25,9 @@
   "books-theHunchbackOfNotreDame-author": "维克多·雨果",
   "books-janeEyre-author": "夏洛蒂·勃朗特",
   "books-walden-author": "亨利·戴维·梭罗",
-  "books-snowWhite-author": "格林兄弟"
+  "books-snowWhite-author": "格林兄弟",
+  "enhanceCatalogue": "AI 增强目录",
+  "enhanceHint": "规则识别可能漏章，点击用 AI 模型重新识别（首次需下载模型）",
+  "modelDownloading": "下载模型",
+  "modelEnhancing": "识别中"
 }
