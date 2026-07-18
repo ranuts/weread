@@ -1,5 +1,5 @@
-import { env, pipeline } from '@huggingface/transformers';
-import type { ProgressInfo, TextClassificationPipeline } from '@huggingface/transformers';
+import { AutoModelForSequenceClassification, AutoTokenizer, env, softmax } from '@huggingface/transformers';
+import type { PreTrainedModel, PreTrainedTokenizer, ProgressInfo } from '@huggingface/transformers';
 import { DEVICE_PRIORITY } from '@/lib/nlp/protocol';
 import type {
   ClassifyRequest,
@@ -10,13 +10,22 @@ import type {
   NlpRequest,
   NlpResponse,
 } from '@/lib/nlp/protocol';
-import { normalizeClassifierOutput } from '@/lib/nlp/score';
 
-// 模型一律走远端 + 浏览器缓存（Cache API），不探测本地路径
-env.allowLocalModels = false;
+// 本地模型（自训 v3）放在应用同源路径下：只从本地加载，不回退 HF 远端
+env.allowLocalModels = true;
+env.allowRemoteModels = false;
 env.useBrowserCache = true;
+// 本地模型基路径：必须用「绝对路径」而非绝对 URL——transformers.js 的存在性检查
+// 会把 http(s):// 开头的 localModelPath 当成远端而跳过本地文件检查（配合 allowRemoteModels=false
+// 就判成文件不存在）。用 pathname（/weread/models/）让本地分支生效。worker 在 /weread/workers/，故上一级。
+env.localModelPath = new URL('../models/', self.location.href).pathname;
+env.backends.onnx.wasm.numThreads = 1;
 
-let classifier: TextClassificationPipeline | null = null;
+// 用 AutoTokenizer + AutoModel 分开加载：pipeline 抽象在 DeBERTa-v2 tokenizer 上会
+// 报「this.tokenizer is not a function」，手动 tokenize + 推理更稳
+let tokenizer: PreTrainedTokenizer | null = null;
+let model: PreTrainedModel | null = null;
+let id2label: Record<number, string> = { 0: 'not_title', 1: 'title' };
 let activeDevice: NlpDevice | null = null;
 let loading: Promise<NlpDevice> | null = null;
 
@@ -43,31 +52,42 @@ const toModelProgress = (info: ProgressInfo): ModelProgress => {
   return progress;
 };
 
-/** 按 DEVICE_PRIORITY 依次尝试创建 pipeline，全部失败抛出最后一个错误 */
+/** 按 DEVICE_PRIORITY 依次尝试加载 tokenizer + model，全部失败抛出最后一个错误 */
 const createClassifier = async (request: LoadRequest): Promise<NlpDevice> => {
+  const progress_callback = (info: ProgressInfo): void => {
+    post({ operationId: request.operationId, type: 'progress', progress: toModelProgress(info) });
+  };
+  // tokenizer 只需加载一次（与设备无关）
+  if (!tokenizer) {
+    tokenizer = await AutoTokenizer.from_pretrained(request.modelId, { progress_callback });
+  }
   let lastError: unknown = null;
   const devices = request.device ? [request.device] : DEVICE_PRIORITY;
   for (const device of devices) {
     try {
-      classifier = await pipeline('text-classification', request.modelId, {
+      model = await AutoModelForSequenceClassification.from_pretrained(request.modelId, {
         device,
-        dtype: request.dtype ?? 'q8',
-        progress_callback: (info: ProgressInfo) => {
-          post({ operationId: request.operationId, type: 'progress', progress: toModelProgress(info) });
-        },
+        // 默认 fp32：DeBERTa-v3 的 int8 量化会坏精度、fp16 转换有图型 bug（见
+        // docs/chapter-model-deployment.md 2.0）。体积优化（词表裁剪等）解决前先用 fp32。
+        dtype: request.dtype ?? 'fp32',
+        progress_callback,
       });
+      const cfgLabels = (model.config as { id2label?: Record<number, string> }).id2label;
+      if (cfgLabels) {
+        id2label = cfgLabels;
+      }
       activeDevice = device;
       return device;
     } catch (error) {
       lastError = error;
-      classifier = null;
+      model = null;
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 };
 
 const handleLoad = async (request: LoadRequest): Promise<void> => {
-  if (classifier && activeDevice) {
+  if (model && tokenizer && activeDevice) {
     post({ operationId: request.operationId, type: 'loaded', device: activeDevice });
     return;
   }
@@ -81,16 +101,24 @@ const handleLoad = async (request: LoadRequest): Promise<void> => {
 };
 
 const handleClassify = async (request: ClassifyRequest): Promise<void> => {
-  if (!classifier) {
+  if (!model || !tokenizer) {
     throw new Error('Model not loaded, send a load request first');
   }
   if (request.lines.length === 0) {
     post({ operationId: request.operationId, type: 'result', scores: [] });
     return;
   }
-  // top_k: null 返回每行全部标签的得分，交给主线程按标签取用
-  const output = (await classifier(request.lines, { top_k: null })) as LabelScore[] | LabelScore[][];
-  const scores = normalizeClassifierOutput(output, request.lines.length);
+  const inputs = tokenizer(request.lines, { padding: true, truncation: true, max_length: 128 });
+  // mDeBERTa 不使用 token_type_ids；且多个 [SEP] 会让分词器按段落递增 type_id，与训练时
+  // （单串输入全 0）不一致，删掉更稳（实测模型本就忽略它，删除不影响正确的 fp32 结果）
+  delete (inputs as Record<string, unknown>).token_type_ids;
+  const { logits } = (await model(inputs)) as { logits: { tolist: () => number[][] } };
+  // logits 形状 [batch, numLabels]，逐行 softmax 后映射成 LabelScore[]
+  const rows = logits.tolist();
+  const scores: LabelScore[][] = rows.map((row) => {
+    const probs = softmax(row);
+    return probs.map((score: number, i: number) => ({ label: id2label[i] ?? `LABEL_${i}`, score }));
+  });
   post({ operationId: request.operationId, type: 'result', scores });
 };
 
@@ -106,7 +134,7 @@ self.onmessage = async (event: MessageEvent<NlpRequest>) => {
     post({
       operationId: request.operationId,
       type: 'error',
-      message: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? `${error.message}\n${error.stack ?? ''}`.slice(0, 600) : String(error),
     });
   }
 };

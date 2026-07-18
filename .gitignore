@@ -23,3 +23,4 @@ dist
 report
 # tesseract
 *.traineddata
+public/models/
