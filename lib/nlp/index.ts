@@ -12,7 +12,8 @@ import type {
 import { toTitleScores } from './score';
 
 /** 微调模型的正类标签，P3 训练脚本需与此保持一致 */
-export const DEFAULT_POSITIVE_LABEL = 'LABEL_1';
+// 自训模型的正类标签为 'title'（config.json id2label），与 ml/train/train.py LABELS 一致
+export const DEFAULT_POSITIVE_LABEL = 'title';
 
 export interface LoadModelOptions {
   modelId?: string;

@@ -11,6 +11,9 @@ const FAMILY_WEIGHTS: Record<string, number> = {
   'roman-line': 0.8,
   'num-enum': 0.7,
   bracket: 0.5,
+  // 模型判出的无编号标题家族；权重高于 bracket，低于带编号的规则家族，
+  // 使结构化书仍由精确的编号规则胜出，语义书才由模型家族接管
+  model: 0.8,
 };
 
 export interface ValidatedChapter {
