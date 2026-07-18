@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import warnings
 from pathlib import Path
 
@@ -19,6 +20,9 @@ warnings.filterwarnings("ignore")
 import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from textfeat import make_text  # noqa: E402
 
 MAX_LEN = 128
 
@@ -45,10 +49,6 @@ def dev_split(records: list[dict], holdout_frac: float = 0.15) -> list[dict]:
     cut = int(len(books) * (1 - holdout_frac))
     dev_books = set(books[cut:])
     return [r for r in records if r["book"] in dev_books]
-
-
-def make_text(r: dict) -> str:
-    return f"{r.get('prev', '')} [SEP] {r['text']} [SEP] {r.get('next', '')}"
 
 
 def main() -> int:

@@ -144,6 +144,7 @@ def parse_epub(path: Path) -> Epub | None:
 def build_records(epub: Epub, book_id: str) -> list[dict]:
     """逐行打标签：命中目录标题的行为正样本，其余为负样本，附前后各一行上下文。"""
     records = []
+    total = len(epub.lines)
     for i, line in enumerate(epub.lines):
         # 标题通常较短；过长的行几乎不可能是目录条目，直接判负，避免正文误匹配
         is_title = len(line) <= 40 and line in epub.titles
@@ -152,7 +153,8 @@ def build_records(epub: Epub, book_id: str) -> list[dict]:
                 "book": book_id,
                 "prev": epub.lines[i - 1] if i > 0 else "",
                 "text": line,
-                "next": epub.lines[i + 1] if i + 1 < len(epub.lines) else "",
+                "next": epub.lines[i + 1] if i + 1 < total else "",
+                "pos": round(i / total, 4),
                 "label": 1 if is_title else 0,
             }
         )
@@ -192,6 +194,7 @@ def parse_txt_weak(path: Path, book_id: str) -> list[dict] | None:
         return None
 
     hit_set = set(hit_idx)
+    total = len(lines)
     records = []
     for i, line in enumerate(lines):
         records.append(
@@ -199,7 +202,8 @@ def parse_txt_weak(path: Path, book_id: str) -> list[dict] | None:
                 "book": book_id,
                 "prev": lines[i - 1] if i > 0 else "",
                 "text": line,
-                "next": lines[i + 1] if i + 1 < len(lines) else "",
+                "next": lines[i + 1] if i + 1 < total else "",
+                "pos": round(i / total, 4),
                 "label": 1 if i in hit_set else 0,
             }
         )
