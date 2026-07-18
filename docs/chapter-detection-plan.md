@@ -2,8 +2,15 @@
 
 > 分支：`feat/txt-chapter-detection`
 > 目标：对用户导入的任意格式 txt，自动识别章节边界并提取标题。
-> 架构：三层规则流水线为基座，mDeBERTa-v3-base（浏览器端 ONNX 推理）作为候选生成的增强层。
+> 架构：三层规则流水线为基座，逐行分类模型（浏览器端 ONNX 推理）作为候选生成的增强层。
 > 制定日期：2026-07-16
+>
+> **⚠️ 本文是初版阶段计划，部分已被后续实践更新。当前进展与决策以这两份为准**：
+> [chapter-detection-journey.md](./chapter-detection-journey.md)（历程 + 16 条经验 + 里程碑）、
+> [chapter-model-deployment.md](./chapter-model-deployment.md)（部署方向：按语言小模型）。
+>
+> **一句话现状（2026-07-18）**：规则层上线级；模型 v3 训成（金庸回目 0.945）且浏览器 fp32 端到端验证正确；
+> 唯一阻塞是体积（DeBERTa-v3 int8 崩），已选定「按语言训标准注意力小模型」解决。
 
 ## 总体架构
 
