@@ -8,4 +8,3 @@ import '@/styles/base.css'; // 单一样式入口（内部 @import 'ranui/style'
 registerBuiltinIcons();
 initTheme();
 mountApp();
-

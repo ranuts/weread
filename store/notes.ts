@@ -36,7 +36,8 @@ export interface BookNote {
 }
 
 /** 生成一条笔记的 id（同一起点同一时刻不会重复）。 */
-export const makeNoteId = (bookId: string, start: number, createdAt: number): string => `${bookId}:${start}:${createdAt}`;
+export const makeNoteId = (bookId: string, start: number, createdAt: number): string =>
+  `${bookId}:${start}:${createdAt}`;
 
 /** 读某本书的全部笔记，按起始偏移升序（渲染/面板都要有序）。未就绪返回空数组，不阻塞阅读。 */
 export const getNotesByBook = async (bookId: string): Promise<BookNote[]> => {

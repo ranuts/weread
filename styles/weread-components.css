@@ -9,12 +9,12 @@
   --wr-content-width: 72rem;
   /* 阅读/封面用的文学衬线栈（Latin + CJK 都覆盖），给"书"的质感。 */
   --wr-serif:
-    'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'STSong',
-    'Noto Serif SC', 'Source Han Serif SC', serif;
+    'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'STSong', 'Noto Serif SC',
+    'Source Han Serif SC', serif;
   /* 无衬线正文栈（Latin + CJK），阅读设置切换 --wr-body-font 时用。 */
   --wr-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei',
-    'Hiragino Sans GB', 'Noto Sans SC', 'Source Han Sans SC', sans-serif;
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB',
+    'Noto Sans SC', 'Source Han Sans SC', sans-serif;
 }
 
 /* 图标悬停：默认次要色，hover 提亮到主文本色。 */
@@ -53,12 +53,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 12px;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.32),
-    rgba(0, 0, 0, 0.06) 55%,
-    transparent
-  );
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0.06) 55%, transparent);
 }
 .wr-cover-spine::after {
   content: '';
@@ -306,8 +301,7 @@
   --ran-input-active-outline: none;
   --ran-input-active-border-color: var(--ran-color-link);
   --ran-input-active-box-shadow:
-    0 0 0 1px var(--ran-color-link),
-    0 0 0 4px color-mix(in srgb, var(--ran-color-link) 20%, transparent);
+    0 0 0 1px var(--ran-color-link), 0 0 0 4px color-mix(in srgb, var(--ran-color-link) 20%, transparent);
 }
 /* "/" 快捷键提示芯片（键帽），聚焦或有输入时隐藏。 */
 .wr-home-kbd {
@@ -465,15 +459,33 @@
   .wr-home-grid > * {
     animation: wr-card-in 0.5s var(--ran-motion-ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
   }
-  .wr-home-grid > *:nth-child(1) { animation-delay: 0.02s; }
-  .wr-home-grid > *:nth-child(2) { animation-delay: 0.06s; }
-  .wr-home-grid > *:nth-child(3) { animation-delay: 0.1s; }
-  .wr-home-grid > *:nth-child(4) { animation-delay: 0.14s; }
-  .wr-home-grid > *:nth-child(5) { animation-delay: 0.18s; }
-  .wr-home-grid > *:nth-child(6) { animation-delay: 0.22s; }
-  .wr-home-grid > *:nth-child(7) { animation-delay: 0.26s; }
-  .wr-home-grid > *:nth-child(8) { animation-delay: 0.3s; }
-  .wr-home-grid > *:nth-child(n + 9) { animation-delay: 0.34s; }
+  .wr-home-grid > *:nth-child(1) {
+    animation-delay: 0.02s;
+  }
+  .wr-home-grid > *:nth-child(2) {
+    animation-delay: 0.06s;
+  }
+  .wr-home-grid > *:nth-child(3) {
+    animation-delay: 0.1s;
+  }
+  .wr-home-grid > *:nth-child(4) {
+    animation-delay: 0.14s;
+  }
+  .wr-home-grid > *:nth-child(5) {
+    animation-delay: 0.18s;
+  }
+  .wr-home-grid > *:nth-child(6) {
+    animation-delay: 0.22s;
+  }
+  .wr-home-grid > *:nth-child(7) {
+    animation-delay: 0.26s;
+  }
+  .wr-home-grid > *:nth-child(8) {
+    animation-delay: 0.3s;
+  }
+  .wr-home-grid > *:nth-child(n + 9) {
+    animation-delay: 0.34s;
+  }
 }
 @keyframes wr-card-in {
   from {
@@ -892,7 +904,8 @@
   corner-shape: superellipse(1.8); /* squircle（现代 Chromium）；不支持时自动回落普通圆角 */
   box-shadow: var(--ran-shadow-menu);
   /* Show 每次 tb null→非空都重建本节点 → 动画每次重放（真正的开合手感）。 */
-  animation: wr-note-pop var(--ran-motion-duration-base, 0.28s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  animation: wr-note-pop var(--ran-motion-duration-base, 0.28s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 @keyframes wr-note-pop {
   from {
@@ -914,7 +927,8 @@
   border-radius: 9999px;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: transform var(--ran-motion-duration-fast, 0.15s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  transition: transform var(--ran-motion-duration-fast, 0.15s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 .wr-note-swatch:hover {
   transform: scale(1.18);
@@ -1038,7 +1052,8 @@
   flex: none;
   cursor: pointer;
   --ran-icon-color: var(--ran-color-text-secondary);
-  transition: transform var(--ran-motion-duration-fast, 0.15s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  transition: transform var(--ran-motion-duration-fast, 0.15s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 .wr-notes-del:hover {
   --ran-icon-color: var(--ran-color-text);
@@ -1127,7 +1142,8 @@
   border-radius: 9999px;
   cursor: pointer;
   /* 暗色纪律：只过渡 transform，颜色瞬时。按下弹簧回弹。 */
-  transition: transform var(--ran-motion-duration-fast, 0.15s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  transition: transform var(--ran-motion-duration-fast, 0.15s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 .wr-settings-step:hover {
   transform: translateY(-1px);
@@ -1171,7 +1187,8 @@
   border-radius: 8px;
   corner-shape: superellipse(1.8);
   cursor: pointer;
-  transition: transform var(--ran-motion-duration-fast, 0.15s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  transition: transform var(--ran-motion-duration-fast, 0.15s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 .wr-settings-seg:hover {
   color: var(--ran-color-text);
@@ -1226,7 +1243,8 @@
   border-radius: 10px;
   corner-shape: superellipse(1.8);
   cursor: pointer;
-  transition: transform var(--ran-motion-duration-fast, 0.15s) var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  transition: transform var(--ran-motion-duration-fast, 0.15s)
+    var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
 }
 .wr-settings-reset:hover {
   color: var(--ran-color-text);

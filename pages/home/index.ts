@@ -110,8 +110,12 @@ const resultRow = (book: BookInfo, term: string, extra?: ElementBuilder): Elemen
       Div()
         .class('wr-home-result-meta')
         .children(
-          Div().class('wr-home-result-title').children(...highlight(book.title ?? '', term)),
-          Div().class('wr-home-result-author').text(book.author ?? ''),
+          Div()
+            .class('wr-home-result-title')
+            .children(...highlight(book.title ?? '', term)),
+          Div()
+            .class('wr-home-result-author')
+            .text(book.author ?? ''),
           extra,
         ),
     );
@@ -242,7 +246,10 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     }
     const active = document.activeElement as HTMLElement | null;
     const typing =
-      active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || active?.isContentEditable || active?.tagName === 'R-INPUT';
+      active?.tagName === 'INPUT' ||
+      active?.tagName === 'TEXTAREA' ||
+      active?.isContentEditable ||
+      active?.tagName === 'R-INPUT';
     if (e.key === '/' && !typing) {
       e.preventDefault();
       focusSearch();
@@ -284,8 +291,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     prefetchModelsForLangs([uiLang()]);
   }
 
-  const hasResults = (): boolean =>
-    titleResult().length > 0 || authorResult().length > 0 || contentResult().length > 0;
+  const hasResults = (): boolean => titleResult().length > 0 || authorResult().length > 0 || contentResult().length > 0;
 
   const bookGroup = (label: string, each: () => BookInfo[]): Child =>
     Show({
@@ -348,7 +354,9 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
                   Div()
                     .class('wr-home-empty')
                     .children(
-                      View('r-icon').attr('name', 'without-content').cssVar('--ran-icon-font-size', EMPTY_ICON_FONT_SIZE),
+                      View('r-icon')
+                        .attr('name', 'without-content')
+                        .cssVar('--ran-icon-font-size', EMPTY_ICON_FONT_SIZE),
                       Div().class('wr-home-empty-text').text(t('no_result')),
                     ),
                 children: [
@@ -388,7 +396,9 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
                                       return resultRow(
                                         b,
                                         searchValue(),
-                                        Div().class('wr-home-result-snippet').children(...highlight(str, searchValue())),
+                                        Div()
+                                          .class('wr-home-result-snippet')
+                                          .children(...highlight(str, searchValue())),
                                       );
                                     },
                                   }),

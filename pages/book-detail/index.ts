@@ -273,9 +273,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                       .on('change', (e: Event) => saveThought((e.target as HTMLTextAreaElement).value)),
                     Div()
                       .class('wr-note-actions')
-                      .children(
-                        View('a').class('wr-note-del').text(t('delete_note')).on('click', removeActiveNote),
-                      ),
+                      .children(View('a').class('wr-note-del').text(t('delete_note')).on('click', removeActiveNote)),
                   ),
             }),
           ),
@@ -457,10 +455,11 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   };
   document.addEventListener('mousedown', onDocMouseDown);
   // 容器挂载 + 布局后：先落阅读设置（CSS 变量/主题），再跑分页（transformText 依赖真实 clientWidth/Height）
-  if (id) requestAnimationFrame(() => {
-    applyReaderChrome();
-    loadBook(id);
-  });
+  if (id)
+    requestAnimationFrame(() => {
+      applyReaderChrome();
+      loadBook(id);
+    });
   // 目录里「识别章节」按钮的手动出口（省流量/慢网场景）→ 跑一次模型识别
   const onRunEnhance = (): void => void runDetect();
   syncHook.tap(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
@@ -526,7 +525,10 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                       .class('wr-reader-nav-btn')
                       .on('click', () => pre(2))
                       .children(
-                        View('r-icon').class('wr-rot-90').attr('name', 'more').cssVar('--ran-icon-font-size', ICON_FONT_SIZE),
+                        View('r-icon')
+                          .class('wr-rot-90')
+                          .attr('name', 'more')
+                          .cssVar('--ran-icon-font-size', ICON_FONT_SIZE),
                         Span().text(t('previous_page')),
                       ),
                     // 阅读位置指示（与移动端对齐）：当前页 / 总页
