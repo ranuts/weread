@@ -35,5 +35,7 @@
   "modelEnhancing": "Detecting",
   "enhanceNoMore": "No additional chapters found",
   "edit_catalogue": "Edit catalogue",
-  "delete_chapter": "Delete chapter"
+  "delete_chapter": "Delete chapter",
+  "delete_book": "Delete",
+  "delete_book_confirm": "Delete “{{0}}”? This can't be undone."
 }

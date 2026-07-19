@@ -6,6 +6,7 @@ import { debounce } from 'ranuts/utils';
 import { Div, For, Match, Show, Span, Switch, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import {
   addBook,
+  deleteBook,
   getAllBooks,
   searchBooksByAuthor,
   searchBooksByContent,
@@ -157,6 +158,14 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
 
   const add = (): void => {
     addBookByFile().then((book) => setBookList([...bookList(), book]));
+  };
+
+  /** 删除书：二次确认（不可撤销）→ 删书本体 + 章节缓存 → 从书架移除。 */
+  const removeBook = (bookId: string): void => {
+    const book = bookList().find((b) => b.id === bookId);
+    if (!window.confirm(t('delete_book_confirm', [book?.title ?? '']))) return;
+    setBookList(bookList().filter((b) => b.id !== bookId));
+    deleteBook(bookId).catch(() => loadBooks()); // 失败则重新拉取，保持与库一致
   };
 
   // 边打边搜：绑到 r-input 的 `input` 事件（每次按键触发），250ms 防抖压请求。
@@ -421,7 +430,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
                         ),
                     ),
                   // 书架栅格：For 按 book.id keyed 复用卡片
-                  For({ each: () => bookList(), key: (b) => b.id, render: (b) => renderBookCard(b) }),
+                  For({ each: () => bookList(), key: (b) => b.id, render: (b) => renderBookCard(b, removeBook) }),
                 ),
             ),
       }),

@@ -2,23 +2,24 @@ import 'ranui/icon';
 import 'ranui/progress';
 import 'ranui/loading';
 import { getQuery } from 'ranuts/utils';
-import { Div, Show, Span, View, createRef, onCleanup, signal } from 'ranui/builder';
+import { Div, Span, View, createRef, onCleanup, signal } from 'ranui/builder';
 import { getBookById } from '@/store/books';
-import { canEnhanceWithModel, enhanceChaptersWithModel, resolveBookChapters } from '@/store/chapters';
-import { canAutoEnhance } from '@/lib/nlp/modelCache';
+import { detectChaptersByModel, hasModelForLang, resolveBookChapters } from '@/store/chapters';
+import { canAutoEnhance, prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
-import { paginateInWorker } from '@/lib/pagingClient';
 import { fromStore } from '@/lib/reactive';
 import {
   EVENT_NAME,
   getCurrentBookDetail,
   getPageNum,
   getTextSyntaxTree,
+  setChapterDetect,
   setCurrentBookDetail,
   setPageNum,
   setTextSyntaxTree,
+  syncHook,
 } from '@/lib/subscribe';
 import { resumeDB } from '@/store';
 import { DEVICE_ENUM, getDevice } from '@/lib/hooks';
@@ -97,19 +98,12 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   const bookDetail = fromStore(getCurrentBookDetail, EVENT_NAME.SET_CURRENT_BOOK_DETAIL);
   const tree = fromStore(getTextSyntaxTree, EVENT_NAME.SET_TEXT_SYNTAX_TREE);
   const pageNum = fromStore(getPageNum, EVENT_NAME.SET_CURRENT_BOOK_PAGE);
-  const [canEnhance, setCanEnhance] = signal(false);
-  const [enhanceProgress, setEnhanceProgress] = signal<number | null>(null);
-  // 增强阶段：'download'（下载模型）/ 'detect'（逐行推理），驱动进度文案
-  const [enhancePhase, setEnhancePhase] = signal<'download' | 'detect'>('download');
-  // 手动增强无改善时的短暂提示（避免「点了没反应像坏了」）
-  const [enhanceNote, setEnhanceNote] = signal<string | null>(null);
-  // 分页进行中（Worker 计算大书语法树时）：显加载态，主线程不冻结
-  const [paging, setPaging] = signal(false);
+  // 章节自动识别（模型增强）状态经共享 store 上报，目录模块就地显 loading / 手动入口。
+  let enhancing = false; // 重入保护
 
   const containerRef = createRef<HTMLDivElement>(); // book-info morph 目标
   const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器
   const contentRef: { current: ArrayBuffer | Uint8Array<ArrayBuffer> | null } = { current: null };
-  const ruleChaptersRef: { current: DetectedChapter[] } = { current: [] };
 
   /** 当前页的章节标题。 */
   const chapterTitle = (): string => {
@@ -129,76 +123,57 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     }
   };
 
-  /** @param auto 是否为「打开 none 书自动触发」（自动路径无改善时保持静默，手动才提示） */
-  const runEnhance = async (auto = false): Promise<void> => {
-    if (!id || !contentRef.current || enhanceProgress() !== null) return;
-    setEnhanceNote(null);
-    setEnhancePhase('download');
-    setEnhanceProgress(0);
+  /**
+   * 模型章节识别（唯一自动识别路径）。状态经 `setChapterDetect` 上报到共享 store，目录模块就地显
+   * 进度圈（下载模型% → 识别%）；识别出章节则重排语法树。结果由 store 层缓存到 IndexedDB，重开不再跑。
+   */
+  const runDetect = async (): Promise<void> => {
+    if (!id || !contentRef.current || enhancing) return;
+    enhancing = true;
+    setChapterDetect({ status: 'detecting', phase: 'download', progress: 0 });
     try {
-      const result = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
+      const record = await detectChaptersByModel(id, contentRef.current, {
         onProgress: (p) => {
-          setEnhancePhase(p.status === CLASSIFY_STATUS ? 'detect' : 'download');
-          if (typeof p.progress === 'number') setEnhanceProgress(Math.round(p.progress));
+          setChapterDetect({
+            status: 'detecting',
+            phase: p.status === CLASSIFY_STATUS ? 'detect' : 'download',
+            progress: typeof p.progress === 'number' ? Math.round(p.progress) : 0,
+          });
         },
       });
-      setCanEnhance(false);
-      if (result?.improved && showContainerRef.current && contentRef.current) {
-        paginateToTree({
-          content: contentRef.current,
-          title: bookDetail().title ?? '',
-          chapters: result.record.chapters,
-          encoding: bookDetail().encoding ?? 'utf-8',
-        });
-        setPageNum(0);
-        // 增强后目录变了，刷新编辑上下文的章节副本
+      if (record && record.chapters.length > 0 && showContainerRef.current && contentRef.current) {
+        const atStart = pageNum() === 0; // 用户还没翻页才回到首页，避免打断阅读
+        paginateToTree({ content: contentRef.current, title: bookDetail().title ?? '', chapters: record.chapters });
+        if (atStart) setPageNum(0);
+        // 识别出目录后刷新编辑上下文的章节副本
         setChapterEditContext({
           id,
           content: contentRef.current,
           container: showContainerRef.current,
           title: bookDetail().title ?? '',
-          lang: result.record.lang,
-          chapters: result.record.chapters.map((c) => ({ ...c })),
+          lang: record.lang,
+          chapters: record.chapters.map((c) => ({ ...c })),
         });
-      } else if (!auto && !result?.improved) {
-        // 手动点了增强但模型没识别出更多章节：给个短暂反馈，几秒后自动消失
-        setEnhanceNote(t('enhanceNoMore'));
-        setTimeout(() => setEnhanceNote(null), 4000);
       }
     } finally {
-      setEnhanceProgress(null);
+      enhancing = false;
+      setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
     }
   };
 
   /**
-   * 分页构建语法树：优先走 Worker（大书不冻结主线程），Worker 不可用时回退主线程同步。
-   * 测量在主线程（读一次 clientW/H），重活在 Worker。
+   * 分页构建语法树。分页算法已优化到百万字约 20ms（charCode 查表替正则 + 索引切片替字符串拼接），
+   * 单帧内完成，主线程无感——直接同步跑，不再上 Worker（省掉消息往返与 dev 下 worker 编译的不确定性）。
    */
   const paginateToTree = (opts: {
     content: ArrayBuffer | Uint8Array<ArrayBuffer>;
     title: string;
     chapters: DetectedChapter[];
-    encoding: string;
   }): void => {
     const el = showContainerRef.current;
     if (!el) return;
-    const { content, title, chapters, encoding } = opts;
-    setPaging(true);
-    const done = (tr: ReturnType<typeof transformTextToExpectedFormat>): void => {
-      setTextSyntaxTree(tr);
-      setPaging(false);
-    };
-    paginateInWorker({
-      content,
-      encoding: encoding || 'utf-8',
-      clientWidth: el.clientWidth,
-      clientHeight: el.clientHeight,
-      title,
-      chapters,
-      prefaceLabel: t('preface'),
-    })
-      .then(done)
-      .catch(() => done(transformTextToExpectedFormat({ content, title, container: el, chapters })));
+    const { content, title, chapters } = opts;
+    setTextSyntaxTree(transformTextToExpectedFormat({ content, title, container: el, chapters }));
   };
 
   const loadBook = (bookId: string): void => {
@@ -209,13 +184,11 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           return;
         }
         setCurrentBookDetail(res.data);
-        const { content, title, encoding } = res.data;
+        const { content, title } = res.data;
         // 章节优先走 IndexedDB 缓存，未命中则识别并写缓存
         resolveBookChapters(bookId, content).then((bookChapters) => {
-          paginateToTree({ content, title, chapters: bookChapters.chapters, encoding });
+          paginateToTree({ content, title, chapters: bookChapters.chapters });
           contentRef.current = content;
-          ruleChaptersRef.current = bookChapters.chapters;
-          setCanEnhance(canEnhanceWithModel(bookChapters));
           containerRef.current?.style.setProperty('view-transition-name', `book-info-${bookId}`);
           // 注册目录编辑上下文（章节副本，供就地增删改后重建树 + 存 manual）
           if (showContainerRef.current) {
@@ -228,12 +201,22 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               chapters: bookChapters.chapters.map((c) => ({ ...c })),
             });
           }
-          // 规则完全没识别出目录（none）→ 打开时自动跑一次模型（模型已预取则秒开、
-          // 省流量/慢网未缓存则回退到手动按钮）。见 canAutoEnhance。
-          if (bookChapters.confidence === 'none' && canEnhanceWithModel(bookChapters)) {
-            canAutoEnhance(bookChapters.lang).then((ok) => {
-              if (ok) void runEnhance(true);
-            });
+          // 自动目录：分页已同步出好（reader 立即可读，整本一章）。无缓存(pending) → 交给模型识别
+          // （唯一路径），目录里显 loading；模型推理在 nlp worker，不冻结 reader。
+          if (bookChapters.source === 'pending') {
+            if (hasModelForLang(bookChapters.lang)) {
+              // 网络允许（已缓存/非省流量）就直接下模型跑，否则目录显「识别章节」手动按钮
+              canAutoEnhance(bookChapters.lang).then((ok) => {
+                if (ok) void runDetect();
+                else setChapterDetect({ status: 'available', phase: 'download', progress: 0 });
+              });
+            } else {
+              // 该语言无模型 → 无法自动识别，保持整本一章
+              setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
+            }
+          } else {
+            // 已有缓存(model/manual/caption) → 目录即终态
+            setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
           }
         });
       })
@@ -242,59 +225,19 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       });
   };
 
+  // 打开阅读页即后台预取本地语言的章节模型（经 SW / 浏览器缓存），让「无感自动目录」尽量秒开；
+  // 省流量/慢网/显式关闭时自动跳过（见 modelCache.networkAllowsDownload）。
+  prefetchModelsForLangs([uiLang()]);
   // 容器挂载 + 布局后再跑分页（transformText 依赖真实 clientWidth/Height）
   if (id) requestAnimationFrame(() => loadBook(id));
-  // 离开阅读页时清理目录编辑上下文，避免下一本书误用
-  onCleanup(clearChapterEditContext);
-
-  /** AI 增强区：进行中显 r-progress(下载%)/r-loading(检测)，可增强显链接。 */
-  const enhanceArea = (): ElementBuilder =>
-    Div()
-      .class('wr-reader-enhance')
-      .children(
-        Show({
-          when: () => enhanceProgress() !== null,
-          children: () =>
-            Div()
-              .class('wr-reader-progress')
-              .children(
-                Show({
-                  when: () => (enhanceProgress() ?? 0) > 0,
-                  children: () =>
-                    View('r-progress')
-                      .class('wr-reader-progress-bar')
-                      .attr('percent', () => String(enhanceProgress() ?? 0)),
-                  fallback: () =>
-                    View('r-loading')
-                      .attr('name', 'circle-fold')
-                      .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
-                }),
-                Span()
-                  .class('wr-reader-progress-text')
-                  .text(() => {
-                    const p = enhanceProgress() ?? 0;
-                    const label = enhancePhase() === 'detect' ? t('modelEnhancing') : t('modelDownloading');
-                    return p > 0 ? `${label} ${p}%` : label;
-                  }),
-              ),
-        }),
-        Show({
-          when: () => canEnhance() && enhanceProgress() === null,
-          children: () =>
-            View('a')
-              .class('wr-reader-enhance-link')
-              .attr('title', t('enhanceHint'))
-              .text(t('enhanceCatalogue'))
-              .on('click', () => {
-                void runEnhance();
-              }),
-        }),
-        // 手动增强无改善的短暂提示
-        Show({
-          when: () => enhanceNote() !== null && enhanceProgress() === null,
-          children: () => Span().class('wr-reader-enhance-note').text(() => enhanceNote() ?? ''),
-        }),
-      );
+  // 目录里「识别章节」按钮的手动出口（省流量/慢网场景）→ 跑一次模型识别
+  const onRunEnhance = (): void => void runDetect();
+  syncHook.tap(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
+  onCleanup(() => {
+    clearChapterEditContext(); // 清理目录编辑上下文，避免下一本书误用
+    syncHook.off(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
+    setChapterDetect({ status: 'idle', phase: 'download', progress: 0 }); // 复位共享状态
+  });
 
   // ── 桌面：双列 + 上/下页按钮 ──────────────────────────────────────────────
   const desktopLayout = (): ElementBuilder => {
@@ -314,28 +257,13 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                   .on('click', toHome),
                 Div()
                   .class('wr-reader-topbar-right')
-                  .children(
-                    enhanceArea(),
-                    View('a').class('wr-reader-home').text(t('home')).on('click', toHome),
-                  ),
+                  .children(View('a').class('wr-reader-home').text(t('home')).on('click', toHome)),
               ),
             Div()
               .class('wr-reader-book book-info-container')
               .ref(containerRef)
               .style('view-transition-name', id ? `book-info-${id}` : '')
               .children(
-                // 分页中（Worker 计算语法树）：纸面中央转圈，主线程保持可交互
-                Show({
-                  when: () => paging(),
-                  children: () =>
-                    Div()
-                      .class('wr-reader-loading')
-                      .children(
-                        View('r-loading')
-                          .attr('name', 'circle-fold')
-                          .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
-                      ),
-                }),
                 Div().class('wr-reader-chapter').text(chapterTitle),
                 Div()
                   .class('wr-reader-columns')
@@ -418,17 +346,6 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
         Div()
           .class('wr-reader-mobile-inner')
           .children(
-            Show({
-              when: () => paging(),
-              children: () =>
-                Div()
-                  .class('wr-reader-loading')
-                  .children(
-                    View('r-loading')
-                      .attr('name', 'circle-fold')
-                      .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
-                  ),
-            }),
             Div()
               .class('wr-reader-chrome wr-reader-chrome-top')
               .style('height', barHeight)
@@ -449,7 +366,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
             Div()
               .class('wr-reader-chrome wr-reader-chrome-bottom')
               .style('height', barHeight)
-              .children(renderMobileBookDetailOperate(), enhanceArea()),
+              .children(renderMobileBookDetailOperate()),
             Div()
               .class('wr-reader-page-indicator')
               .text(() => `${pageNum() + 1} / ${tree().totalPage + 1}`),

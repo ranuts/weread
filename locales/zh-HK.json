@@ -35,5 +35,7 @@
   "modelEnhancing": "識別中",
   "enhanceNoMore": "未發現更多章節",
   "edit_catalogue": "編輯目錄",
-  "delete_chapter": "刪除章節"
+  "delete_chapter": "刪除章節",
+  "delete_book": "刪除",
+  "delete_book_confirm": "刪除《{{0}}》？此操作無法復原。"
 }

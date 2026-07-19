@@ -35,8 +35,24 @@ const EMPTY_RESULT: Omit<PagingTextResult, 'program'> = {
 };
 
 /**
+ * 「单词字符」查表：`\w`（A-Za-z0-9_）+ 半角标点 `-.,!?;:'"()[]{}`，索引即 charCode（仅 ASCII，
+ * >127 的 CJK/全角一律非单词——与原 `/[\w...]/.test(char)`（无 u 标志）行为一致）。
+ * 全局构建一次，替代每字符跑一次正则（分页热路径的最大开销）。
+ */
+const WORD_PART = (() => {
+  const table = new Uint8Array(128);
+  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.,!?;:'\"()[]{}";
+  for (let i = 0; i < chars.length; i++) table[chars.charCodeAt(i)] = 1;
+  return table;
+})();
+const isWordCode = (code: number): boolean => code < 128 && WORD_PART[code] === 1;
+
+/**
  * 按容器尺寸把一段文本分页。纯计算：只用 `dims` 与固定排版常量推导每行字符数/总行数，
  * 循环内不触碰 DOM。等价于原 `pagingText(content, container)`，但接收测量好的尺寸。
+ *
+ * 性能：热路径用 `charCodeAt` + 查表替正则；页文本用 `text.slice(pageStart, useChar)` 一次切出，
+ * 不再逐字符 `+=` 拼超长字符串——大书（百万字）分页耗时数量级下降，行为逐字节不变。
  */
 export const pagingTextCore = (content: string, dims: PagingDims): PagingTextResult => {
   const text = content.replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
@@ -57,20 +73,15 @@ export const pagingTextCore = (content: string, dims: PagingDims): PagingTextRes
   let useChar = 0;
   const result: PagingTextItem[] = [];
 
-  // 辅助函数：检查是否是英文单词的一部分（包括连字符和半角字符）
-  const isWordPart = (char: string): boolean => {
-    return /[\w\-.,!?;:'"()[\]{}]/.test(char);
-  };
-
-  // 辅助函数：查找下一个单词的结束位置
+  // 查找下一个单词的结束位置
   const findNextWordEnd = (start: number): number => {
     let pos = start;
     let lastWordEnd = start;
     while (pos < total) {
-      const char = text[pos];
-      if (isWordPart(char)) {
+      const code = text.charCodeAt(pos);
+      if (isWordCode(code)) {
         pos++;
-      } else if (char === ' ') {
+      } else if (code === 32) {
         lastWordEnd = pos;
         pos++;
         break;
@@ -81,16 +92,16 @@ export const pagingTextCore = (content: string, dims: PagingDims): PagingTextRes
     return lastWordEnd;
   };
 
-  // 辅助函数：查找当前单词的开始位置
+  // 查找当前单词的开始位置
   const findWordStart = (end: number): number => {
     let pos = end;
     let lastWordStart = end;
     while (pos > 0) {
-      const char = text[pos - 1];
-      if (isWordPart(char)) {
+      const code = text.charCodeAt(pos - 1);
+      if (isWordCode(code)) {
         lastWordStart = pos - 1;
         pos--;
-      } else if (char === ' ') {
+      } else if (code === 32) {
         break;
       } else {
         pos--;
@@ -102,23 +113,22 @@ export const pagingTextCore = (content: string, dims: PagingDims): PagingTextRes
   while (total > useChar) {
     let currentLine = 0;
     let currentChart = 0;
-    let currentText = '';
     const pageStart = useChar;
     let remainingChars = pageTotalChar;
 
+    // 页文本 = text.slice(pageStart, useChar)：两个游标始终同步推进，无需逐字符拼接。
     while (currentLine < totalLine && currentChart < pageTotalChar && useChar < total) {
-      const char = text[useChar];
+      const code = text.charCodeAt(useChar);
 
-      if (char === '\n' || char === '\r') {
+      if (code === 10 || code === 13) {
         currentLine++;
         currentChart = 0;
-        currentText += char;
         useChar++;
         remainingChars--;
         continue;
       }
 
-      const isWordPartChar = isWordPart(char);
+      const isWordPartChar = isWordCode(code);
 
       if (currentChart >= charsPerLine) {
         if (isWordPartChar) {
@@ -135,33 +145,23 @@ export const pagingTextCore = (content: string, dims: PagingDims): PagingTextRes
         continue;
       }
 
-      currentText += char;
       useChar++;
-      if (isWordPart(char)) {
-        currentChart += 0.5625;
-      } else {
-        currentChart++;
-      }
+      currentChart += isWordPartChar ? 0.5625 : 1;
       remainingChars--;
     }
 
-    // 检查是否在单词中间结束页面
-    if (useChar < total) {
-      const nextChar = text[useChar];
-      if (isWordPart(nextChar)) {
-        const wordStart = findWordStart(useChar);
-        const wordEnd = findNextWordEnd(useChar);
-        const wordLength = wordEnd - wordStart;
-        if (wordLength > remainingChars) {
-          currentText = currentText.slice(0, wordStart - pageStart);
-          useChar = wordStart;
-        }
+    // 检查是否在单词中间结束页面：整词放不下则回退到词首，把整词挪到下一页
+    if (useChar < total && isWordCode(text.charCodeAt(useChar))) {
+      const wordStart = findWordStart(useChar);
+      const wordEnd = findNextWordEnd(useChar);
+      if (wordEnd - wordStart > remainingChars) {
+        useChar = wordStart;
       }
     }
 
     const size = result.length;
     result.push({
-      text: currentText,
+      text: text.slice(pageStart, useChar),
       start: pageStart,
       end: useChar,
       index: size,
@@ -177,10 +177,7 @@ export const pagingTextCore = (content: string, dims: PagingDims): PagingTextRes
   }
 
   result.forEach((item, index) => {
-    if (index === 0) {
-      item.start = 0;
-    }
-    item.start = result[index - 1]?.end || 0;
+    item.start = index === 0 ? 0 : result[index - 1]?.end || 0;
   });
 
   return {
