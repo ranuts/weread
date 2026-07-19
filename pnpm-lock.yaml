@@ -21,8 +21,8 @@ importers:
         specifier: ^3.1.4
         version: 3.1.4
       ranui:
-        specifier: 0.2.1-alpha.3
-        version: 0.2.1-alpha.3
+        specifier: 0.2.1-alpha.4
+        version: 0.2.1-alpha.4
       ranuts:
         specifier: 0.2.0-alpha.1
         version: 0.2.0-alpha.1
@@ -1590,8 +1590,8 @@ packages:
     resolution: {integrity: sha512-/FPD0nUc9jH6rfFjji9IBqOz4pcSE3CsT1m7Ep6Mdb0LxSUMj8hgl6GomOvZzpNpAqqGaXA0P3VSrZLFzIhQrw==}
     engines: {node: '>=12.0.0'}
 
-  ranui@0.2.1-alpha.3:
-    resolution: {integrity: sha512-sF/QMB3QxCXgrz0CA4cIC+zDViv6rAHqzIzmbDFGXHnnZihSjDFvWzvBAg4MqG9uAy1klKen4bTRli4uuQYurQ==}
+  ranui@0.2.1-alpha.4:
+    resolution: {integrity: sha512-k+0fX4o1k8MF+zwWzrQR919l6i0AkhkuasHOIGoeKL3pevnTZ+7VM4EygULKjt8YVPuL3d/UUxpG6cCaD1DoRg==}
     engines: {node: '>=20.19.0'}
 
   ranuts@0.2.0-alpha.1:
@@ -3189,7 +3189,7 @@ snapshots:
       '@types/node': 26.1.1
       long: 5.3.2
 
-  ranui@0.2.1-alpha.3:
+  ranui@0.2.1-alpha.4:
     dependencies:
       mermaid: 11.16.0
       ranuts: 0.2.0-alpha.1

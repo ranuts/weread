@@ -187,3 +187,319 @@
 .wr-operate-mobile {
   cursor: pointer;
 }
+
+/* ---------- Home（首页 / 书架，单份响应式） ---------- */
+.wr-home {
+  min-height: 100%;
+  background: var(--ran-color-bg-subtle);
+}
+.wr-home-topbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 1rem 1.5rem 0;
+}
+.wr-home-search {
+  padding: 2rem 1rem 0;
+}
+.wr-home-input {
+  display: block;
+  width: 50%;
+  min-width: 18rem;
+  max-width: 40rem;
+  height: 3.25rem;
+  margin: 0 auto;
+}
+.wr-home-panel {
+  overflow: hidden;
+  width: 100%;
+  margin-top: 1.5rem;
+  transition: height var(--ran-motion-duration-base, 0.5s) ease;
+}
+.wr-home-results {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 1.5rem;
+}
+.wr-home-result-group {
+  width: 50%;
+  min-width: 18rem;
+  max-width: 40rem;
+  margin: 0 auto 1.5rem;
+  padding: 1.25rem 0;
+  background: var(--ran-color-bg-elevated);
+  border-radius: var(--ran-radius-lg, 12px);
+}
+.wr-home-result-label {
+  padding: 0 1.25rem 0.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--ran-color-text-secondary);
+}
+.wr-home-result-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+}
+.wr-home-result-row:hover {
+  background: var(--ran-color-bg-hover);
+}
+.wr-home-result-cover {
+  width: 4rem;
+  flex: none;
+  border-radius: var(--ran-radius-sm, 4px);
+}
+.wr-home-result-meta {
+  min-width: 0;
+}
+.wr-home-result-title {
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ran-color-text);
+  word-break: break-all;
+}
+.wr-home-result-author {
+  margin-top: 0.25rem;
+  color: var(--ran-color-text-secondary);
+}
+.wr-home-result-snippet {
+  margin-top: 0.25rem;
+  color: var(--ran-color-text-secondary);
+  word-break: break-all;
+}
+.wr-home-hit {
+  color: var(--ran-color-primary);
+}
+.wr-home-loading,
+.wr-home-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--ran-color-text-secondary);
+}
+.wr-home-empty-text {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+}
+.wr-home-shelf {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+.wr-home-shelf-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--ran-color-text);
+  margin-bottom: 0.5rem;
+}
+.wr-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
+}
+.wr-home-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 10rem;
+  background: var(--ran-color-bg-elevated);
+  border-radius: var(--ran-radius-lg, 12px);
+  cursor: pointer;
+  transition: transform var(--ran-motion-duration-base, 0.2s);
+  --ran-icon-color: var(--ran-color-border);
+}
+.wr-home-add:hover {
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .wr-home-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .wr-home-result-group {
+    width: 100%;
+    min-width: 0;
+  }
+  .wr-home-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+    gap: 1rem;
+  }
+  .wr-home-add {
+    height: 9rem;
+  }
+}
+
+/* ---------- Book detail（阅读页） ---------- */
+.wr-reader {
+  height: 100vh;
+  background: var(--ran-color-bg);
+}
+.wr-rot-90 {
+  transform: rotate(90deg);
+}
+.wr-rot-neg-90 {
+  transform: rotate(-90deg);
+}
+
+/* 桌面：双列 */
+.wr-reader-desktop {
+  position: relative;
+  padding: 0 clamp(1.5rem, 8vw, 11rem);
+}
+.wr-reader-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.wr-reader-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 4rem;
+}
+.wr-reader-book-title {
+  font-weight: 500;
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+}
+.wr-reader-book-title:hover {
+  color: var(--ran-color-text);
+}
+.wr-reader-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.wr-reader-home {
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+}
+.wr-reader-home:hover {
+  color: var(--ran-color-text);
+}
+.wr-reader-enhance {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.wr-reader-enhance-link {
+  font-size: 0.875rem;
+  color: var(--ran-color-primary);
+  cursor: pointer;
+}
+.wr-reader-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.wr-reader-progress-bar {
+  width: 8rem;
+}
+.wr-reader-progress-text {
+  font-size: 0.8125rem;
+  color: var(--ran-color-text-secondary);
+  white-space: nowrap;
+}
+.wr-reader-book {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 1.75rem 4rem 0;
+  background: var(--ran-color-bg-elevated);
+  border-radius: var(--ran-radius-lg, 16px);
+}
+.wr-reader-chapter {
+  font-size: 0.875rem;
+  font-weight: 300;
+  color: var(--ran-color-text-secondary);
+}
+.wr-reader-columns {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 1.25rem;
+  font-size: 1.125rem;
+  line-height: 2.25rem;
+  letter-spacing: 0.02em;
+  color: var(--ran-color-text);
+}
+.wr-reader-col {
+  width: 44%;
+  height: 100%;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.wr-reader-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  height: 4rem;
+}
+.wr-reader-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ran-color-text-secondary);
+  border: 1px solid var(--ran-color-border);
+  border-radius: 9999px;
+  cursor: pointer;
+}
+.wr-reader-nav-btn:hover {
+  background: var(--ran-color-bg-hover);
+}
+
+/* 移动：单列 + chrome 栏 */
+.wr-reader-mobile-inner {
+  position: relative;
+  height: 100%;
+  padding: 2rem;
+}
+.wr-reader-chrome {
+  position: absolute;
+  left: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 1rem;
+  overflow: hidden;
+  background: var(--ran-color-bg-elevated);
+  transition: height var(--ran-motion-duration-base, 0.3s) ease;
+}
+.wr-reader-chrome-top {
+  top: 0;
+}
+.wr-reader-chrome-bottom {
+  bottom: 0;
+}
+.wr-reader-mobile-text {
+  width: 100%;
+  height: 100%;
+  font-size: 1.125rem;
+  line-height: 2.25rem;
+  white-space: pre-wrap;
+  color: var(--ran-color-text);
+}
+.wr-reader-page-indicator {
+  position: absolute;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 10;
+  font-size: 1rem;
+  color: var(--ran-color-text-secondary);
+}
