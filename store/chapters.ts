@@ -16,7 +16,7 @@ export const STORE_NAME_BOOKS_CHAPTERS_KEY = 'books_chapters';
  * - `model`：逐行模型识别（唯一的自动识别路径）
  * - `manual`：用户手动修正
  * - `pending`：尚未识别（等模型跑），不写缓存
- * 说明：规则模式匹配（第X章/Chapter N）已弃用——真实语料只 54% 覆盖且打地鼠，见
+ * 说明：规则模式匹配（第 X 章/Chapter N）已弃用——真实语料只 54% 覆盖且打地鼠，见
  * docs/chapter-detection-journey.md 经验 3。规则模块文件保留但不再参与识别。
  */
 export type ChapterSource = 'caption' | 'model' | 'manual' | 'pending';
