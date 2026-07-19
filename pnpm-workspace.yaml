@@ -8,3 +8,5 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
   sharp: false
+minimumReleaseAgeExclude:
+  - ranui@0.2.1-alpha.3
