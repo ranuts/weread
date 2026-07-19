@@ -26,6 +26,8 @@ export interface LoadModelOptions {
 export interface ClassifyOptions {
   /** 视为「是标题」的标签名 */
   positiveLabel?: string;
+  /** 分批推理进度回调（status: 'classifying'，progress 0-100） */
+  onProgress?: (progress: ModelProgress) => void;
 }
 
 interface PendingOperation {
@@ -74,15 +76,15 @@ export class ChapterClassifier {
     return this.device;
   }
 
-  /** 逐行返回「是标题」概率，需先 load */
+  /** 逐行返回「是标题」概率，需先 load。onProgress 报分批推理进度。 */
   async classifyLines(lines: string[], options: ClassifyOptions = {}): Promise<number[]> {
-    const scores = await this.classifyLinesRaw(lines);
+    const scores = await this.classifyLinesRaw(lines, options.onProgress);
     return toTitleScores(scores, options.positiveLabel ?? DEFAULT_POSITIVE_LABEL);
   }
 
   /** 逐行返回全部标签得分，调试与评估用 */
-  async classifyLinesRaw(lines: string[]): Promise<LabelScore[][]> {
-    const response = await this.send({ type: 'classify', lines });
+  async classifyLinesRaw(lines: string[], onProgress?: (progress: ModelProgress) => void): Promise<LabelScore[][]> {
+    const response = await this.send({ type: 'classify', lines }, onProgress);
     return (response as ClassifyResponse).scores;
   }
 

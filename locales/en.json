@@ -32,5 +32,6 @@
   "enhanceCatalogue": "Enhance with AI",
   "enhanceHint": "Rules may miss chapters — re-detect with the AI model (downloads once)",
   "modelDownloading": "Downloading model",
-  "modelEnhancing": "Detecting"
+  "modelEnhancing": "Detecting",
+  "enhanceNoMore": "No additional chapters found"
 }

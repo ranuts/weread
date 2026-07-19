@@ -1,4 +1,5 @@
 import { makeModelInput } from '@/lib/nlp/features';
+import type { ModelProgress } from '@/lib/nlp/protocol';
 import { collectCandidates, MAX_TITLE_LENGTH } from './candidates';
 import type { Candidate } from './candidates';
 import { validateCandidates } from './validate';
@@ -34,12 +35,14 @@ const splitLines = (text: string): Line[] => {
   return lines;
 };
 
-/** 逐行分类器：输入 makeModelInput 拼好的字符串数组，返回每行「是标题」的概率 */
-export type ClassifyLines = (inputs: string[]) => Promise<number[]>;
+/** 逐行分类器：输入 makeModelInput 拼好的字符串数组，返回每行「是标题」的概率。onProgress 报推理进度。 */
+export type ClassifyLines = (inputs: string[], onProgress?: (progress: ModelProgress) => void) => Promise<number[]>;
 
 export interface ModelDetectOptions {
   /** 判为标题的概率阈值 */
   threshold?: number;
+  /** 分批推理进度回调，透传给分类器 */
+  onProgress?: (progress: ModelProgress) => void;
 }
 
 /**
@@ -78,7 +81,7 @@ export const detectChaptersWithModel = async (
     }),
   );
 
-  const probs = inputs.length > 0 ? await classify(inputs) : [];
+  const probs = inputs.length > 0 ? await classify(inputs, options.onProgress) : [];
   const modelCands: Candidate[] = [];
   candIdx.forEach((i, k) => {
     if (probs[k] >= threshold) {

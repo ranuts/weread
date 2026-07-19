@@ -12,6 +12,12 @@ export const PLACEHOLDER_MODEL_ID = 'Xenova/distilbert-base-uncased-finetuned-ss
 /** 推理后端，按优先级降级 */
 export const DEVICE_PRIORITY = ['webgpu', 'wasm'] as const;
 
+/**
+ * 逐行推理阶段的进度 status（区别于 transformers.js 的下载进度）。
+ * worker 在 classify 分批时以此 status 上报 0-100，主线程据此把 UI 从「下载」切到「识别」。
+ */
+export const CLASSIFY_STATUS = 'classifying';
+
 export type NlpDevice = (typeof DEVICE_PRIORITY)[number];
 
 /** 模型加载进度（transformers.js progress_callback 的窄化投影，可结构化克隆） */

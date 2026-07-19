@@ -3,7 +3,7 @@ import 'ranui/icon';
 import 'ranui/loading';
 import 'ranui/theme-switch';
 import { debounce } from 'ranuts/utils';
-import { Div, For, Match, Show, Span, Switch, View, signal } from 'ranui/builder';
+import { Div, For, Match, Show, Span, Switch, View, createRef, onCleanup, signal } from 'ranui/builder';
 import {
   addBook,
   getAllBooks,
@@ -15,6 +15,7 @@ import { resumeDB } from '@/store';
 import { checkEncoding, createReader, trim } from '@/lib/transformText';
 import { BOOKS_ADD_BY_DEFAULT, ensampleConfigs } from '@/lib/ensample';
 import { renderBookCard } from '@/components/BookCard';
+import { prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { ROUTE_PATH } from '@/router';
 import { t } from '@/locales';
 import type { Child, ElementBuilder } from 'ranui/builder';
@@ -119,6 +120,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   const [titleResult, setTitleResult] = signal<BookInfo[]>([]);
   const [authorResult, setAuthorResult] = signal<BookInfo[]>([]);
   const [contentResult, setContentResult] = signal<SearchResult[]>([]);
+  const inputRef = createRef<HTMLInputElement & { value: string }>();
 
   const clearResults = (): void => {
     setTitleResult([]);
@@ -139,11 +141,13 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     addBookByFile().then((book) => setBookList([...bookList(), book]));
   };
 
+  // 边打边搜：绑到 r-input 的 `input` 事件（每次按键触发），250ms 防抖压请求。
   const onChange = debounce((e: Event): void => {
     const value = trim((e.target as HTMLInputElement)?.value || '');
     setSearchValue(value);
     if (!value) {
       setSearchLoading(false);
+      clearResults();
       return;
     }
     setSearchLoading(true);
@@ -154,7 +158,38 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
       searchBooksByAuthor<BookInfo>(value).then((r) => !r.error && setAuthorResult(r.data)),
       searchBooksByContent<SearchResult>(value).then((r) => !r.error && setContentResult(r.data)),
     ]).finally(() => setSearchLoading(false));
-  }, 500);
+  }, 250);
+
+  /** 清空搜索（Esc / 结果外点）：清输入框值 + 复位所有搜索信号，露出书架。 */
+  const clearSearch = (): void => {
+    if (inputRef.current) inputRef.current.value = '';
+    setSearchValue('');
+    setSearchLoading(false);
+    clearResults();
+  };
+
+  /** 聚焦搜索框并全选（`/` 快捷键）。依赖 ranui ≥ 补了 r-input.focus() 的版本；
+      旧版无 focus() 时可选链兜底为 no-op（升级 ranui 后即生效）。 */
+  const focusSearch = (): void => {
+    const el = inputRef.current as (HTMLElement & { select?: () => void }) | null;
+    el?.focus?.();
+    el?.select?.();
+  };
+
+  /** 全局快捷键：`/` 聚焦搜索（输入中忽略，避免抢字符），`Esc` 清空并退出搜索态。 */
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const active = document.activeElement as HTMLElement | null;
+    const typing =
+      active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || active?.isContentEditable || active?.tagName === 'R-INPUT';
+    if (e.key === '/' && !typing) {
+      e.preventDefault();
+      focusSearch();
+    } else if (e.key === 'Escape' && searchValue()) {
+      clearSearch();
+      active?.blur?.();
+    }
+  };
 
   const onResultClick = (e: Event): void => {
     const id = (e.target as HTMLElement).closest?.('[item-id]')?.getAttribute('item-id');
@@ -170,6 +205,11 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
       localStorage.setItem(BOOKS_ADD_BY_DEFAULT, 'true');
     }
     loadBooks();
+    window.addEventListener('keydown', onKey);
+    onCleanup(() => window.removeEventListener('keydown', onKey));
+    // 打开网页后空闲时后台预取本地语言的章节模型（经 SW 缓存），
+    // 之后打开 none 书可秒开自动增强。省流量/慢网/显式关闭时自动跳过。
+    prefetchModelsForLangs([uiLang()]);
   }
 
   const hasResults = (): boolean =>
@@ -211,12 +251,19 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
       Div()
         .class('wr-home-search')
         .children(
-          View('r-input')
-            .class('wr-home-input')
-            .attr('icon', 'search')
-            .attr('placeholder', t('search'))
-            .style(INPUT_CSS_VARS)
-            .on('change', onChange),
+          // 输入框 + 右侧 "/" 快捷键提示芯片（聚焦时隐藏）
+          Div()
+            .class('wr-home-search-field')
+            .children(
+              View('r-input')
+                .ref(inputRef)
+                .class('wr-home-input')
+                .attr('icon', 'search')
+                .attr('placeholder', t('search'))
+                .style(INPUT_CSS_VARS)
+                .on('input', onChange),
+              View('kbd').class('wr-home-kbd').attr('aria-hidden', 'true').text('/'),
+            ),
           // 搜索面板：高度随 searchValue 动画（signal → .style）
           Div()
             .class('wr-home-panel')
@@ -298,11 +345,21 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
               Div()
                 .class('wr-home-grid')
                 .children(
-                  // "+" 导入卡（虚线幽灵封面，尺寸与书封一致）
+                  // "+" 导入卡（虚线幽灵封面，尺寸与书封一致）——键盘可达（Enter/Space 触发）
                   Div()
                     .class('wr-home-add')
                     .attr('title', t('add_book'))
+                    .attr('role', 'button')
+                    .attr('tabindex', '0')
+                    .attr('aria-label', t('add_book'))
                     .on('click', add)
+                    .on('keydown', (e: Event) => {
+                      const ke = e as KeyboardEvent;
+                      if (ke.key === 'Enter' || ke.key === ' ') {
+                        ke.preventDefault();
+                        add();
+                      }
+                    })
                     .children(
                       Div()
                         .class('wr-home-add-inner')

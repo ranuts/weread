@@ -1,6 +1,6 @@
 import { AutoModelForSequenceClassification, AutoTokenizer, env, softmax } from '@huggingface/transformers';
 import type { PreTrainedModel, PreTrainedTokenizer, ProgressInfo } from '@huggingface/transformers';
-import { DEVICE_PRIORITY } from '@/lib/nlp/protocol';
+import { CLASSIFY_STATUS, DEVICE_PRIORITY } from '@/lib/nlp/protocol';
 import type {
   ClassifyRequest,
   LabelScore,
@@ -100,25 +100,48 @@ const handleLoad = async (request: LoadRequest): Promise<void> => {
   post({ operationId: request.operationId, type: 'loaded', device });
 };
 
+/** 分批推理的批大小：够大以摊薄前向固定开销，够小以出进度、控峰值内存、不长时间阻塞 worker */
+const CLASSIFY_BATCH_SIZE = 64;
+
 const handleClassify = async (request: ClassifyRequest): Promise<void> => {
   if (!model || !tokenizer) {
     throw new Error('Model not loaded, send a load request first');
   }
-  if (request.lines.length === 0) {
+  const { lines } = request;
+  if (lines.length === 0) {
     post({ operationId: request.operationId, type: 'result', scores: [] });
     return;
   }
-  const inputs = tokenizer(request.lines, { padding: true, truncation: true, max_length: 128 });
-  // mDeBERTa 不使用 token_type_ids；且多个 [SEP] 会让分词器按段落递增 type_id，与训练时
-  // （单串输入全 0）不一致，删掉更稳（实测模型本就忽略它，删除不影响正确的 fp32 结果）
-  delete (inputs as Record<string, unknown>).token_type_ids;
-  const { logits } = (await model(inputs)) as { logits: { tolist: () => number[][] } };
-  // logits 形状 [batch, numLabels]，逐行 softmax 后映射成 LabelScore[]
-  const rows = logits.tolist();
-  const scores: LabelScore[][] = rows.map((row) => {
-    const probs = softmax(row);
-    return probs.map((score: number, i: number) => ({ label: id2label[i] ?? `LABEL_${i}`, score }));
-  });
+
+  const activeModel = model;
+  const activeTokenizer = tokenizer;
+  const scores: LabelScore[][] = [];
+  const total = lines.length;
+  // 进入推理即先报 0%，让主线程 UI 从「下载 100%」翻到「识别中」（推理无外部进度源，靠分批推）
+  post({ operationId: request.operationId, type: 'progress', progress: { status: CLASSIFY_STATUS, progress: 0 } });
+
+  for (let start = 0; start < total; start += CLASSIFY_BATCH_SIZE) {
+    const batch = lines.slice(start, start + CLASSIFY_BATCH_SIZE);
+    // padding 按「本批最长」而非全量最长——分批天然降低无谓 padding 与峰值张量体积；
+    // attention_mask 屏蔽 padding，逐批 padding 不影响每行 logits。
+    const inputs = activeTokenizer(batch, { padding: true, truncation: true, max_length: 128 });
+    // mDeBERTa 不使用 token_type_ids；且多个 [SEP] 会让分词器按段落递增 type_id，与训练时
+    // （单串输入全 0）不一致，删掉更稳（实测模型本就忽略它，删除不影响正确的 fp32 结果）
+    delete (inputs as Record<string, unknown>).token_type_ids;
+    const { logits } = (await activeModel(inputs)) as { logits: { tolist: () => number[][] } };
+    // logits 形状 [batch, numLabels]，逐行 softmax 后映射成 LabelScore[]
+    for (const row of logits.tolist()) {
+      const probs = softmax(row);
+      scores.push(probs.map((score: number, i: number) => ({ label: id2label[i] ?? `LABEL_${i}`, score })));
+    }
+    const done = Math.min(start + CLASSIFY_BATCH_SIZE, total);
+    post({
+      operationId: request.operationId,
+      type: 'progress',
+      progress: { status: CLASSIFY_STATUS, progress: Math.round((done / total) * 100) },
+    });
+  }
+
   post({ operationId: request.operationId, type: 'result', scores });
 };
 

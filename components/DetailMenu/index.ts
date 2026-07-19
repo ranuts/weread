@@ -82,6 +82,7 @@ const buildEmpty = (): ElementBuilder =>
 export const renderBookDetailMenu = (): ElementBuilder => {
   const [showSearchResult, setShowSearchResult] = signal(false);
   const [searchResult, setSearchResult] = signal<SearchResultItem[]>([]);
+  // 边打边搜（`input` 事件，250ms 防抖）。
   const onSearch = debounce((e: Event): void => {
     const searchValue = trim((e.target as HTMLInputElement)?.value || '');
     if (!searchValue) {
@@ -90,7 +91,7 @@ export const renderBookDetailMenu = (): ElementBuilder => {
     }
     setShowSearchResult(true);
     setSearchResult(searchTree(getTextSyntaxTree(), searchValue));
-  }, 500);
+  }, 250);
 
   const onSearchResult = (e: Event): void => {
     const index = (e.target as HTMLElement)?.getAttribute('item-index');
@@ -108,7 +109,7 @@ export const renderBookDetailMenu = (): ElementBuilder => {
             .attr('icon', 'search')
             .attr('placeholder', t('search'))
             .style(INPUT_CSS_VARS)
-            .on('change', onSearch),
+            .on('input', onSearch),
         ),
       // 目录常驻构建（保留其滚动/响应式），随搜索态切换显隐。
       renderCatalogue().style('display', () => (showSearchResult() ? 'none' : 'flex')),
