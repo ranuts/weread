@@ -27,22 +27,23 @@ const notesTrigger = (): ElementBuilder =>
     .class('wr-operate-trigger')
     .children(View('r-icon').class('hover-icon').attr('name', 'book').cssVar('--ran-icon-font-size', NOTES_ICON_FONT_SIZE));
 
-/** 桌面端：右上角浮动操作簇（排版设置 + 笔记 + 书内菜单），点击左向弹出对应浮层。 */
+/** 桌面端：右上角浮动操作簇（目录 + 排版设置 + 笔记），点击左向弹出对应浮层。
+ * 目录放第一个（最靠上）——其浮层向下展开，锚在顶部时纵向空间最大。 */
 export const renderBookDetailOperate = (): ElementBuilder =>
   Div()
     .class('wr-operate')
     .children(
+      renderPopover({ placement: 'left', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
       renderPopover({ placement: 'left', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
       renderPopover({ placement: 'left', trigger: 'click', overlay: renderNotesPanel(), children: notesTrigger() }),
-      renderPopover({ placement: 'left', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
     );
 
-/** 移动端：底部 chrome 栏内的操作簇（排版设置 + 笔记 + 书内菜单），点击向上弹出对应浮层。 */
+/** 移动端：底部 chrome 栏内的操作簇（目录 + 排版设置 + 笔记），点击向上弹出对应浮层。 */
 export const renderMobileBookDetailOperate = (): ElementBuilder =>
   Div()
     .class('wr-operate-mobile')
     .children(
+      renderPopover({ placement: 'top', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
       renderPopover({ placement: 'top', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
       renderPopover({ placement: 'top', trigger: 'click', overlay: renderNotesPanel(), children: notesTrigger() }),
-      renderPopover({ placement: 'top', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
     );
