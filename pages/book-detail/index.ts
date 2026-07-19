@@ -584,7 +584,10 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       }
     };
     const back = (): void => window.history.back();
-    const barHeight = (): string => (isTouch() ? '3.5rem' : '0px');
+    // chrome 展开/收起改用 class（而非内联 height），让 CSS 独占高度 + 仅展开时叠加设备安全区内边距，
+    // 收起（height:0）时不残留安全区留白。
+    const chromeClass = (edge: 'top' | 'bottom'): string =>
+      `wr-reader-chrome wr-reader-chrome-${edge} ${isTouch() ? 'is-open' : ''}`;
 
     return Div()
       .class('wr-reader wr-reader-mobile')
@@ -595,8 +598,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           .class('wr-reader-mobile-inner')
           .children(
             Div()
-              .class('wr-reader-chrome wr-reader-chrome-top')
-              .style('height', barHeight)
+              .class(() => chromeClass('top'))
               .children(
                 View('r-icon')
                   .class('wr-rot-90')
@@ -613,8 +615,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               .on('click', onClick)
               .children(segmentsIndex(() => pageNum())),
             Div()
-              .class('wr-reader-chrome wr-reader-chrome-bottom')
-              .style('height', barHeight)
+              .class(() => chromeClass('bottom'))
               .children(renderMobileBookDetailOperate()),
             Div()
               .class('wr-reader-page-indicator')
