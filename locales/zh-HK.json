@@ -33,5 +33,7 @@
   "enhanceHint": "規則識別可能漏章，點擊用 AI 模型重新識別（首次需下載模型）",
   "modelDownloading": "下載模型",
   "modelEnhancing": "識別中",
-  "enhanceNoMore": "未發現更多章節"
+  "enhanceNoMore": "未發現更多章節",
+  "edit_catalogue": "編輯目錄",
+  "delete_chapter": "刪除章節"
 }

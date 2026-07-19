@@ -1,4 +1,5 @@
 import { collectCandidates } from './candidates';
+import type { Candidate } from './candidates';
 import { validateCandidates } from './validate';
 
 /**
@@ -36,10 +37,13 @@ const UNNUMBERED_FAMILIES = new Set(['bracket']);
  * @description: 从无固定格式的 txt 文本中识别章节边界并提取标题，附带置信度信号。
  * 流程：按行生成候选（多语言模式库）→ 全局验证（编号递增序列 + 间距过滤 + 家族竞争）。
  * @param {string} text 已将换行统一为 \n 的全文
+ * @param {Candidate[]} candidates 可选：预先算好的候选（调用方已 collectCandidates 时传入，避免重复全文扫描）
  * @return {ChapterDetection} 章节列表（end 为下一章起点或文本末尾）+ 置信度
  */
-export const detectChaptersDetailed = (text: string): ChapterDetection => {
-  const candidates = collectCandidates(text);
+export const detectChaptersDetailed = (
+  text: string,
+  candidates: Candidate[] = collectCandidates(text),
+): ChapterDetection => {
   const validation = validateCandidates(candidates, text.length);
   const chapters = validation.chapters.map((chapter, index) => ({
     title: chapter.title,

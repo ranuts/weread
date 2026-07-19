@@ -7,6 +7,7 @@ import { getBookById } from '@/store/books';
 import { canEnhanceWithModel, enhanceChaptersWithModel, resolveBookChapters } from '@/store/chapters';
 import { canAutoEnhance } from '@/lib/nlp/modelCache';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
+import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
 import { fromStore } from '@/lib/reactive';
 import {
@@ -132,24 +133,33 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     setEnhancePhase('download');
     setEnhanceProgress(0);
     try {
-      const enhanced = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
+      const result = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
         onProgress: (p) => {
           setEnhancePhase(p.status === CLASSIFY_STATUS ? 'detect' : 'download');
           if (typeof p.progress === 'number') setEnhanceProgress(Math.round(p.progress));
         },
       });
       setCanEnhance(false);
-      if (enhanced && showContainerRef.current && contentRef.current) {
+      if (result?.improved && showContainerRef.current && contentRef.current) {
         setTextSyntaxTree(
           transformTextToExpectedFormat({
             content: contentRef.current,
             title: bookDetail().title ?? '',
             container: showContainerRef.current,
-            chapters: enhanced.chapters,
+            chapters: result.record.chapters,
           }),
         );
         setPageNum(0);
-      } else if (!enhanced && !auto) {
+        // 增强后目录变了，刷新编辑上下文的章节副本
+        setChapterEditContext({
+          id,
+          content: contentRef.current,
+          container: showContainerRef.current,
+          title: bookDetail().title ?? '',
+          lang: result.record.lang,
+          chapters: result.record.chapters.map((c) => ({ ...c })),
+        });
+      } else if (!auto && !result?.improved) {
         // 手动点了增强但模型没识别出更多章节：给个短暂反馈，几秒后自动消失
         setEnhanceNote(t('enhanceNoMore'));
         setTimeout(() => setEnhanceNote(null), 4000);
@@ -182,6 +192,17 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           ruleChaptersRef.current = bookChapters.chapters;
           setCanEnhance(canEnhanceWithModel(bookChapters));
           containerRef.current?.style.setProperty('view-transition-name', `book-info-${bookId}`);
+          // 注册目录编辑上下文（章节副本，供就地增删改后重建树 + 存 manual）
+          if (showContainerRef.current) {
+            setChapterEditContext({
+              id: bookId,
+              content,
+              container: showContainerRef.current,
+              title,
+              lang: bookChapters.lang,
+              chapters: bookChapters.chapters.map((c) => ({ ...c })),
+            });
+          }
           // 规则完全没识别出目录（none）→ 打开时自动跑一次模型（模型已预取则秒开、
           // 省流量/慢网未缓存则回退到手动按钮）。见 canAutoEnhance。
           if (bookChapters.confidence === 'none' && canEnhanceWithModel(bookChapters)) {
@@ -198,6 +219,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
 
   // 容器挂载 + 布局后再跑分页（transformText 依赖真实 clientWidth/Height）
   if (id) requestAnimationFrame(() => loadBook(id));
+  // 离开阅读页时清理目录编辑上下文，避免下一本书误用
+  onCleanup(clearChapterEditContext);
 
   /** AI 增强区：进行中显 r-progress(下载%)/r-loading(检测)，可增强显链接。 */
   const enhanceArea = (): ElementBuilder =>

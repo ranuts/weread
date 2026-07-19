@@ -43,6 +43,8 @@ export interface ModelDetectOptions {
   threshold?: number;
   /** 分批推理进度回调，透传给分类器 */
   onProgress?: (progress: ModelProgress) => void;
+  /** 可选：预先算好的规则候选（调用方已 collectCandidates 时传入，避免重复全文扫描） */
+  candidates?: Candidate[];
 }
 
 /**
@@ -97,7 +99,8 @@ export const detectChaptersWithModel = async (
   });
 
   // union 规则候选 → 结构层过滤（家族竞争选出规则或模型家族）
-  const all = [...collectCandidates(text), ...modelCands];
+  const ruleCands = options.candidates ?? collectCandidates(text);
+  const all = [...ruleCands, ...modelCands];
   const validation = validateCandidates(all, text.length);
   return validation.chapters.map((chapter, index) => ({
     title: chapter.title,

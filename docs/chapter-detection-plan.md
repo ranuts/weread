@@ -167,10 +167,16 @@ P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）�
    分批 padding 按本批最长（降峰值张量），attention_mask 屏蔽 padding 不影响每行 logits。
    浏览器实测：Walden(none/en) 自动增强文案「下载100%」→「识别中」→「识别中 42%」逐步推进、跑完清空、无报错。
    **注**：WASM 首批仍有 warmup（~秒级 0%），大书总时长仍偏长——真正提速要 WebGPU / 更小骨干 / int4，属体积线。
-2. **enhance 复用规则层已算结果**：`enhanceChaptersWithModel` 现重复 `arrayBufferToString`+
-   `detectLanguage`+内部 `collectCandidates`，而 `resolveBookChapters` 打开书时已算过（lang 已入缓存）。
-   把 text/lang/规则候选透传进来，去掉三处重复（大书增强明显更快）。**需把 text 从 resolve 侧线程化到
-   enhance/transformText，属中等重构。**
+2. ✅ **enhance 复用规则层已算结果**（2026-07-19）：`store/chapters.ts` 加模块级 `resolveMemo`
+   （最近一本的 `{id,text,lang,candidates}`），`resolveBookChapters` 规则分支算候选时顺手存；
+   `enhanceChaptersWithModel` 命中同 id 时复用其 decode 文本 / 语言 / 规则候选，免掉重复
+   `arrayBufferToString`（大书上百万字符）+ `detectLanguage` + `collectCandidates`。`detectChaptersDetailed`
+   与 `detectChaptersWithModel` 都加了可选 `candidates` 入参（默认 `collectCandidates`，向后兼容）。
+   换书 / 缓存命中未重算时 id 不匹配，enhance 自动回退重算，语义安全。
+   **附带修复自动增强副作用**：`enhanceChaptersWithModel` 改为**无论是否改善都写缓存 source:'model'**
+   （无改善时保留规则章节 + confidence:'none'，返回 `{record, improved}`）——否则 none 书模型没找到更多章节时
+   不缓存，`canEnhanceWithModel` 仍判 true，**每次打开都自动重跑几十秒推理**。现一次尝试即终态，
+   重开不再触发。浏览器实测：Walden 首开自动增强→缓存 source:model/none/0 章→重开无进度无按钮、不再推理。
 3. **成功判据改「比质量」+ 失败反馈**：
    - ✅ 失败反馈（2026-07-19）：`runEnhance(auto)` 区分自动/手动；手动无改善弹短暂提示
      `enhanceNoMore`（4s 自动消失），自动路径保持静默。i18n 三语齐。
@@ -181,7 +187,27 @@ P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）�
    （zh 0.6–0.7、en 0.5；`threshold` 已可配但 UI 未传）。
 5. **健壮性**：`canEnhance` 依赖旧缓存 `lang`（缺失→永假）改为 lang 缺失时按 text 现算；
    `TERMINAL_PUNCT` 三处（modelDetect/features/textfeat.py）收敛单一来源；页面卸载 dispose worker。
-6. **目录手动编辑 UI**（承 Phase 4）：source:manual 增量标注飞轮，也是裸口语短语标题模型能力边界的兜底。
+6. **目录手动编辑 UI**（承 Phase 4）：source:manual 增量标注飞轮，也是裸口语短语标题模型能力边界的兜底，
+   以及 source:model 差结果的「解锁/纠正」出口（现差结果会被 source:model 锁住，手动编辑是唯一改法）。
+   - 🚧 **本轮 MVP（2026-07-19）：重命名 + 删除**。设计：目录由语法树 `titleIdTitle` 派生（chapters →
+     sections，首章 start>0 时前缀合成「前言」段），编辑须作用于底层 `chapters` 数组再经阅读页容器重建树。
+     - `lib/chapterEdit.ts`（新）：阅读页注册编辑上下文 `{id,content,container,title,lang,chapters}`；
+       `renameChapter(titleId,title)`/`deleteChapter(titleId)` 把目录 titleId 减去 preface 偏移映射到
+       chapters 下标（preface 段映射 -1 不可编辑），改动后 `transformTextToExpectedFormat` 重建树 +
+       `setTextSyntaxTree` + 存 `source:'manual'`。删除时前一章 `end` 吸收被删章范围（免全量重算 end）。
+     - `store/chapters.ts` 加 `saveManualChapters`（source:manual，confidence:high，清 resolveMemo）；
+       manual 记录跨 algoVersion 永久有效、canEnhance 判 false，天然是差结果的终态纠正。
+     - `components/Catalogue`：编辑切换（`setting` 图标；`edit`/`delete` 非 ranui 内置图标，删除用 `close`）
+       仅 editableCount>0 才显；编辑态下每项显删除 ×、点标题就地 contenteditable 重命名（blur/Enter 提交、
+       Esc 还原），非编辑态正常导航。i18n 加 `edit_catalogue`/`delete_chapter` 三语。
+     - **验证**：`bin/build.sh` + 全量 `vitest`（37 过）+ oxlint 均绿（对 ranui 0.3.1-alpha.1）。
+       ⚠️ **浏览器交互走查本轮未成**：环境三连坑——① 用户把 ranui 从 0.2.x 升到 **0.3.1-alpha.1**，
+       在跑的旧 dev server 仍指向已不存在的 alpha.5 路径而报 `ranui.css ENOENT`（须重启 dev）；
+       ② 新端口 IndexedDB 默认书 seeding 偶发只成 1/8（并行 addBook 争用，`Uncaught(in promise)×7`，既有 flaky）；
+       ③ chrome-devtools-mcp 反复 profile 锁「browser already running」即使杀净进程仍复现（MCP 内部态，agent 侧无法复位）。
+       **下次环境稳定后需实测**：目录编辑切换 → 删章（目录缩短、正文并入上一章）→ 重命名（标题变）→ 重开 source:manual 保留。
+   - ⬜ 后续：「把当前页设为新章节」（需 page→原文 offset 映射）、拖拽调序、撤销；核对 ranui 0.3 升级对
+     builder/图标运行时行为无回归（build 已过，运行时待走查）。
 
 ## 里程碑与顺序
 

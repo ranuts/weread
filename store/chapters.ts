@@ -1,6 +1,6 @@
 import { db } from '@/store/index';
-import { CHAPTER_ALGO_VERSION, detectChaptersDetailed } from '@/lib/chapter';
-import type { ChapterConfidence, DetectedChapter } from '@/lib/chapter';
+import { CHAPTER_ALGO_VERSION, collectCandidates, detectChaptersDetailed } from '@/lib/chapter';
+import type { Candidate, ChapterConfidence, DetectedChapter } from '@/lib/chapter';
 import { detectChaptersWithModel } from '@/lib/chapter/modelDetect';
 import { ChapterClassifier } from '@/lib/nlp';
 import type { ModelProgress } from '@/lib/nlp';
@@ -61,6 +61,13 @@ export const saveChapters = async (record: Omit<BookChapters, 'algoVersion' | 'm
 };
 
 /**
+ * resolveBookChapters 刚算过的中间产物，供紧随其后的 `enhanceChaptersWithModel` 复用，
+ * 免掉重复的 decode（大书上百万字符）+ 规则全文扫描。阅读场景一次一本，只留最近一本；
+ * 换书或缓存命中（未重算）时 id 不匹配，enhance 自动回退到重算，语义安全。
+ */
+let resolveMemo: { id: string; text: string; lang: BookLang; candidates: Candidate[] } | null = null;
+
+/**
  * 解析一本书的章节：缓存命中直接返回；否则依次尝试
  * <caption-title> 标注 → 规则识别，并把结果写入缓存。
  * 返回的 chapters 偏移基于「解码后换行归一化为 \n」的文本，
@@ -89,7 +96,9 @@ export const resolveBookChapters = async (
       lang,
     };
   } else {
-    const detection = detectChaptersDetailed(text);
+    // 候选只算一次：既喂规则验证，又备给可能紧随的模型增强（union 用同一份规则候选）
+    const candidates = collectCandidates(text);
+    const detection = detectChaptersDetailed(text, candidates);
     record = {
       id,
       chapters: detection.chapters,
@@ -98,6 +107,7 @@ export const resolveBookChapters = async (
       source: 'rules',
       lang,
     };
+    resolveMemo = { id, text, lang, candidates };
   }
   await saveChapters(record);
   return { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
@@ -126,19 +136,29 @@ export interface EnhanceOptions {
   threshold?: number;
 }
 
+/** 模型增强结果：record 为写入缓存的记录；improved 表示是否比规则找到了更多章节。 */
+export interface EnhanceResult {
+  record: BookChapters;
+  improved: boolean;
+}
+
 /**
- * 用语言模型重新识别章节，结果写缓存（source: 'model'）并返回。
- * 模型未改善（识别数不多于规则）或该语言无模型时返回 null，调用方保持规则结果。
- * 模型懒加载：首次调用才下载对应语言模型（带进度回调）。
+ * 用语言模型重新识别章节，**无论是否改善都写缓存（source: 'model'）**——这样
+ * `canEnhanceWithModel` 之后判 false，重开该书不再自动/手动重跑推理（一次尝试即终态，
+ * 避免每次打开都跑几十秒模型）。improved 为 false 时保留规则章节、供调用方给「未发现更多章节」反馈。
+ * 该语言无模型时返回 null（调用方保持规则结果）。模型懒加载：首次调用才下载。
+ * 复用 resolveBookChapters 的中间产物（text/lang/候选），免掉重复 decode + 规则扫描。
  */
 export const enhanceChaptersWithModel = async (
   id: string,
   content: ArrayBuffer | Uint8Array<ArrayBuffer>,
   ruleChapters: DetectedChapter[],
   options: EnhanceOptions = {},
-): Promise<BookChapters | null> => {
-  const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
-  const lang = detectLanguage(text);
+): Promise<EnhanceResult | null> => {
+  // 紧随 resolveBookChapters 时命中 memo，直接复用其解码文本 / 语言 / 规则候选
+  const memo = resolveMemo?.id === id ? resolveMemo : null;
+  const text = memo?.text ?? (arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '');
+  const lang = memo?.lang ?? detectLanguage(text);
   const modelId = modelIdForLang(lang);
   if (!modelId) {
     return null;
@@ -155,22 +175,34 @@ export const enhanceChaptersWithModel = async (
   const chapters = await detectChaptersWithModel(
     text,
     (inputs, onProgress) => activeClassifier.classifyLines(inputs, { onProgress }),
-    { threshold: options.threshold, onProgress: options.onProgress },
+    { threshold: options.threshold, onProgress: options.onProgress, candidates: memo?.candidates },
   );
-  // 模型没找到更多章节就不覆盖规则结果（避免越增强越差）
-  if (chapters.length <= ruleChapters.length) {
-    return null;
-  }
+  // 模型没找到更多章节则保留规则结果（避免越增强越差），但仍缓存 source:'model' 标记「已尝试」
+  const improved = chapters.length > ruleChapters.length;
   const record: Omit<BookChapters, 'algoVersion' | 'modifyTime'> = {
     id,
-    chapters,
-    confidence: 'high',
+    chapters: improved ? chapters : ruleChapters,
+    confidence: improved ? 'high' : 'none',
     familyId: null,
     source: 'model',
     lang,
   };
   await saveChapters(record);
-  return { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
+  return { record: { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() }, improved };
+};
+
+/**
+ * 保存用户手动编辑后的章节（source:'manual'）。manual 记录跨 algoVersion 永久有效、
+ * `canEnhanceWithModel` 判 false——既是标注飞轮，也是规则/模型差结果的终态纠正出口。
+ * 章节变了，清掉 resolveMemo 以免后续误用旧候选。
+ */
+export const saveManualChapters = async (
+  id: string,
+  chapters: DetectedChapter[],
+  lang?: BookLang,
+): Promise<void> => {
+  resolveMemo = null;
+  await saveChapters({ id, chapters, confidence: 'high', familyId: null, source: 'manual', lang });
 };
 
 /** 删除某本书的章节缓存（删书或手动重置时用） */

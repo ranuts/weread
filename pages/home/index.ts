@@ -3,7 +3,7 @@ import 'ranui/icon';
 import 'ranui/loading';
 import 'ranui/theme-switch';
 import { debounce } from 'ranuts/utils';
-import { Div, For, Match, Show, Span, Switch, View, createRef, onCleanup, signal } from 'ranui/builder';
+import { Div, For, Match, Show, Span, Switch, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import {
   addBook,
   getAllBooks,
@@ -121,6 +121,19 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   const [authorResult, setAuthorResult] = signal<BookInfo[]>([]);
   const [contentResult, setContentResult] = signal<SearchResult[]>([]);
   const inputRef = createRef<HTMLInputElement & { value: string }>();
+  const panelRef = createRef<HTMLDivElement>();
+  const [selected, setSelected] = signal(0); // 键盘选中的结果行下标
+
+  /** 当前搜索面板里的所有可选结果行（DOM 顺序 = 展示顺序）。 */
+  const resultRows = (): HTMLElement[] =>
+    Array.from(panelRef.current?.querySelectorAll('.wr-home-result-row') ?? []) as HTMLElement[];
+
+  /** 打开选中项（越界回落第一条），整页跳转书详情。 */
+  const openSelected = (): void => {
+    const rows = resultRows();
+    const id = (rows[selected()] ?? rows[0])?.getAttribute('item-id');
+    if (id) window.location.href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
+  };
 
   const clearResults = (): void => {
     setTitleResult([]);
@@ -152,6 +165,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     }
     setSearchLoading(true);
     clearResults();
+    setSelected(0); // 新搜索：高亮回到第一条
     // 三路并行 worker 搜索：标题 / 作者 / 内容（各分页 3 条）
     Promise.all([
       searchBooksByTitle<BookInfo>(value).then((r) => !r.error && setTitleResult(r.data)),
@@ -176,9 +190,30 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     el?.select?.();
   };
 
-  /** 全局快捷键：`/` 聚焦搜索（输入中忽略，避免抢字符），`Esc` 清空并退出搜索态。 */
+  /** 全局快捷键：搜索态下 ↑/↓ 移动高亮、Enter 打开；`/` 聚焦搜索；`Esc` 清空退出。 */
   const onKey = (e: KeyboardEvent): void => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // 搜索态：方向键/回车驱动结果导航（输入框聚焦时也生效）
+    if (searchValue()) {
+      const rows = resultRows();
+      if (rows.length) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelected(Math.min(selected() + 1, rows.length - 1));
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelected(Math.max(selected() - 1, 0));
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          openSelected();
+          return;
+        }
+      }
+    }
     const active = document.activeElement as HTMLElement | null;
     const typing =
       active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || active?.isContentEditable || active?.tagName === 'R-INPUT';
@@ -207,6 +242,17 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
     loadBooks();
     window.addEventListener('keydown', onKey);
     onCleanup(() => window.removeEventListener('keydown', onKey));
+    // 高亮同步：selected 或结果变化后，把 .is-highlighted 落到第 selected 行并滚入视口。
+    // rAF 等 For 重渲染 flush，避免命中旧节点。
+    createEffect(() => {
+      const sel = selected();
+      void (titleResult().length + authorResult().length + contentResult().length); // 订阅结果变化
+      requestAnimationFrame(() => {
+        const rows = resultRows();
+        rows.forEach((r, i) => r.classList.toggle('is-highlighted', i === sel));
+        rows[sel]?.scrollIntoView({ block: 'nearest' });
+      });
+    });
     // 打开网页后空闲时后台预取本地语言的章节模型（经 SW 缓存），
     // 之后打开 none 书可秒开自动增强。省流量/慢网/显式关闭时自动跳过。
     prefetchModelsForLangs([uiLang()]);
@@ -267,6 +313,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
           // 搜索面板：高度随 searchValue 动画（signal → .style）
           Div()
             .class('wr-home-panel')
+            .ref(panelRef)
             .style('height', () => (searchValue() ? 'calc(100vh - 12rem)' : '0px'))
             .on('click', onResultClick)
             .children(
