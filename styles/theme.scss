@@ -2,6 +2,14 @@
    亮/暗由 ranui 主题（initTheme/setTheme）翻转 --ran-color-* 基色自动完成，
    故不再需要单独的 [theme='dark'] 块，也不再需要 Tailwind @theme 映射。 */
 :root {
+  /* 主色调 = Vercel/Geist 单色（黑白），不用蓝强调色。
+     把 --ran-color-primary 一族重指向 contrast 语义 token：亮=近黑(#171717)、暗=近白(#ededed)，
+     随主题自动翻转。全站强调/焦点环/链接/logo/loading 因此统一走墨色。
+     对齐 ran.chaxus.com / edit.chaxus.com，作为所有站点的默认基调。 */
+  --ran-color-primary: var(--ran-color-contrast-bg);
+  --ran-color-primary-hover: var(--ran-color-contrast-bg-hover);
+  --ran-color-primary-active: var(--ran-color-contrast-bg-active);
+
   --front-bg-color-1: var(--ran-color-bg);
   --front-bg-color-2: var(--ran-color-bg-subtle);
   --front-bg-color-3: var(--ran-color-bg-elevated);

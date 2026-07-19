@@ -127,10 +127,55 @@ P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）�
   `CHAPTER_ALGO_VERSION` 变更时自动失效重算（manual 修正除外）；阅读页双端已接线
 - ✅ 附带修复：WebDB / dbWorker 连接补上 `onversionchange` 自动断开——否则任何
   DB 版本升级都会被旧连接（worker 或其他标签页）永久阻塞
-- ⬜ 模型增强接线：low/none 置信度时提示用户下载模型增强解析（依赖 P3 真模型）
+- ✅ 模型增强接线：low/medium/none 显示「AI 增强」按钮（`canEnhanceWithModel`），
+  点击懒加载语言模型 + 带进度；成功重建语法树、缓存 source:model（2026-07-19）
 - ⬜ 目录手动编辑 UI：用户可增删改章节点；**用户修正即标注数据**（source: manual），
   本地留存，（可选、需用户同意）匿名回传作为下一轮训练语料
-- ⬜ i18n：新增文案走 `locales/`
+- ✅ i18n：新增文案走 `locales/`（enhanceCatalogue 等）
+
+## Phase 5 — 自动增强 + 模型预取 + SW 缓存版本化 + 推理优化（2026-07-19 起）
+
+面向真实体验的落地：从「规则先出、模型靠手动按钮」升级为「打开网页后台预取模型、
+规则完全失败的书打开时自动增强」，并修掉 SW 缓存导致的「代码更新了却吃旧缓存」。
+
+### 5.1 已完成（2026-07-19）
+
+- **规则 none 打开时自动增强**（`pages/book-detail` `loadBook`）：规则 `confidence==='none'`
+  且该语言有模型时，按 `canAutoEnhance(lang)` 决定是否自动 `runEnhance()`——不再只靠按钮。
+- **模型后台预取**（`lib/nlp/modelCache.ts` 新增）：首页 client 侧 `prefetchModelsForLangs([uiLang()])`，
+  `requestIdleCallback` 空闲拉取本地语言模型文件进 SW 缓存；受网络守卫约束
+  （`navigator.connection.saveData` / `2g|slow-2g` / `localStorage['weread_disable_model_prefetch']` 时跳过）。
+  `canAutoEnhance`：模型已缓存 → 必自动；未缓存但网络允许 → 也自动（带进度）；省流量未缓存 → 回退手动按钮。
+- **SW 缓存版本化**（`public/sw.js` 重写 + `bin/build-ssg.js` 注入）：
+  - 资源缓存 `weread_assets_${BUILD_ID}`，`BUILD_ID` = 构建注入的 ISO 时间戳（每次构建必变
+    → sw.js 字节变 → 浏览器检测到新 SW；activate 删非当前版本缓存 → 新代码即时生效）。
+  - HTML 导航**网络优先**（拿最新代码，离线回退缓存）；`skipWaiting` + `clients.claim`；
+    注册加 `updateViaCache:'none'`（避免 HTTP 缓存把旧 sw.js 藏起来）。
+  - **模型走固定名 `weread_models` 缓存、缓存优先、跨版本保留**——发版不重下 100MB 权重。
+  - dev（未注入 BUILD_ID / 预缓存清单）用 `typeof` 守卫降级，不再像旧版在 install 崩。
+  - 注：旧 `bin/build.sh` 写的 `variable/SERVICE_WORK_VERSION.ts` 是死代码（无人 import），
+    真正版本化靠 BUILD_ID；后续可清理。
+- **浏览器实测**：首页空闲预取 5 个 en 文件（含 65MB onnx）；开 Walden(none/en) 无点击自动出进度、
+  模型走缓存秒开、跑完未超规则返回 null 静默保留规则结果；build 注入 BUILD_ID 正确、模型不进 precache 清单。
+
+### 5.2 规划（按序实施，性价比降序）
+
+1. **worker 分批推理 + 推理进度**（`workers/nlpWorker.ts`）：现为单次大 batch
+   `tokenizer(allLines, {padding:true})` + 一次前向 → 峰值内存高、无进度、大英文书 WASM 实测 ~75s。
+   改按批（32/64）循环推理，每批 `postMessage` 进度；主线程把「识别中」显示成真实百分比。
+   —— 直接治「自动增强跑 75s 且全程误显『下载 100%』」。
+2. **enhance 复用规则层已算结果**：`enhanceChaptersWithModel` 现重复 `arrayBufferToString`+
+   `detectLanguage`+内部 `collectCandidates`，而 `resolveBookChapters` 打开书时已算过（lang 已入缓存）。
+   把 text/lang/规则候选透传进来，去掉三处重复（大书增强明显更快）。
+3. **成功判据改「比质量」+ 失败反馈**：现仅 `chapters.length<=ruleChapters.length` 比数量（规则误报多、
+   模型正确少时会误弃更优结果）。改为覆盖度 + 间距均匀度 + 章节数合理性打分；手动增强无改善时给
+   toast 反馈（现在静默像坏了），并提供「回退规则 / 重新识别」出口。
+4. **模型无编号家族的结构层过滤**（`lib/chapter/validate.ts`）：model 家族现只过 gap + minCount3、
+   无 LIS/contiguity，precision~0.34 的假阳性几乎不被挡。加位置均匀性/间距方差离群剔除，或按语言提阈值
+   （zh 0.6–0.7、en 0.5；`threshold` 已可配但 UI 未传）。
+5. **健壮性**：`canEnhance` 依赖旧缓存 `lang`（缺失→永假）改为 lang 缺失时按 text 现算；
+   `TERMINAL_PUNCT` 三处（modelDetect/features/textfeat.py）收敛单一来源；页面卸载 dispose worker。
+6. **目录手动编辑 UI**（承 Phase 4）：source:manual 增量标注飞轮，也是裸口语短语标题模型能力边界的兜底。
 
 ## 里程碑与顺序
 

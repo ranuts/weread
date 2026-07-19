@@ -11,3 +11,4 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - ranui@0.2.1-alpha.3
   - ranui@0.2.1-alpha.4
+  - ranui@0.2.1-alpha.5

@@ -150,9 +150,13 @@ export const enhanceChaptersWithModel = async (
     loadedModelId = modelId;
   }
   const activeClassifier = classifier;
-  const chapters = await detectChaptersWithModel(text, (inputs) => activeClassifier.classifyLines(inputs), {
-    threshold: options.threshold,
-  });
+  // 推理进度透传：worker 分批时以 status:'classifying' 上报 0-100，
+  // 经 detectChaptersWithModel → classifyLines → 同一 onProgress 回到 UI（下载%→识别%）。
+  const chapters = await detectChaptersWithModel(
+    text,
+    (inputs, onProgress) => activeClassifier.classifyLines(inputs, { onProgress }),
+    { threshold: options.threshold, onProgress: options.onProgress },
+  );
   // 模型没找到更多章节就不覆盖规则结果（避免越增强越差）
   if (chapters.length <= ruleChapters.length) {
     return null;

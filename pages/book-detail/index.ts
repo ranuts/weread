@@ -2,9 +2,11 @@ import 'ranui/icon';
 import 'ranui/progress';
 import 'ranui/loading';
 import { getQuery } from 'ranuts/utils';
-import { Div, Show, Span, View, createRef, signal } from 'ranui/builder';
+import { Div, Show, Span, View, createRef, onCleanup, signal } from 'ranui/builder';
 import { getBookById } from '@/store/books';
 import { canEnhanceWithModel, enhanceChaptersWithModel, resolveBookChapters } from '@/store/chapters';
+import { canAutoEnhance } from '@/lib/nlp/modelCache';
+import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
 import { fromStore } from '@/lib/reactive';
 import {
@@ -49,6 +51,38 @@ const next = (num = 1): void => {
 };
 
 /**
+ * 桌面键盘翻页：←/PageUp 上一页，→/PageDown/Space 下一页（Shift+Space 上一页）。
+ * 输入聚焦（书内搜索）或带修饰键时不拦截，避免抢占浏览器/输入快捷键。
+ * 需在 `createRoot` 作用域内调用（用 onCleanup 解绑），且只在桌面布局绑定。
+ */
+const bindKeyboardPaging = (): void => {
+  const onKey = (e: KeyboardEvent): void => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const el = document.activeElement as HTMLElement | null;
+    if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable) return;
+    if (el?.closest?.('r-input, r-content, .wr-menu')) return;
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'PageUp':
+        e.preventDefault();
+        pre(2);
+        break;
+      case 'ArrowRight':
+      case 'PageDown':
+        e.preventDefault();
+        next(2);
+        break;
+      case ' ':
+        e.preventDefault();
+        e.shiftKey ? pre(2) : next(2);
+        break;
+    }
+  };
+  window.addEventListener('keydown', onKey);
+  onCleanup(() => window.removeEventListener('keydown', onKey));
+};
+
+/**
  * 阅读页：加载链（`getBookById`→`resolveBookChapters`→`transformTextToExpectedFormat`→
  * `setTextSyntaxTree`）+ `fromStore` 翻页信号（只更新标题 + 正文列）+ AI 增强 + 返回 morph。
  * `transformText` 需要真实布局的容器（clientW/H≥30），故加载链在 `requestAnimationFrame`
@@ -63,6 +97,10 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   const pageNum = fromStore(getPageNum, EVENT_NAME.SET_CURRENT_BOOK_PAGE);
   const [canEnhance, setCanEnhance] = signal(false);
   const [enhanceProgress, setEnhanceProgress] = signal<number | null>(null);
+  // 增强阶段：'download'（下载模型）/ 'detect'（逐行推理），驱动进度文案
+  const [enhancePhase, setEnhancePhase] = signal<'download' | 'detect'>('download');
+  // 手动增强无改善时的短暂提示（避免「点了没反应像坏了」）
+  const [enhanceNote, setEnhanceNote] = signal<string | null>(null);
 
   const containerRef = createRef<HTMLDivElement>(); // book-info morph 目标
   const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器
@@ -87,12 +125,16 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     }
   };
 
-  const runEnhance = async (): Promise<void> => {
+  /** @param auto 是否为「打开 none 书自动触发」（自动路径无改善时保持静默，手动才提示） */
+  const runEnhance = async (auto = false): Promise<void> => {
     if (!id || !contentRef.current || enhanceProgress() !== null) return;
+    setEnhanceNote(null);
+    setEnhancePhase('download');
     setEnhanceProgress(0);
     try {
       const enhanced = await enhanceChaptersWithModel(id, contentRef.current, ruleChaptersRef.current, {
         onProgress: (p) => {
+          setEnhancePhase(p.status === CLASSIFY_STATUS ? 'detect' : 'download');
           if (typeof p.progress === 'number') setEnhanceProgress(Math.round(p.progress));
         },
       });
@@ -107,6 +149,10 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           }),
         );
         setPageNum(0);
+      } else if (!enhanced && !auto) {
+        // 手动点了增强但模型没识别出更多章节：给个短暂反馈，几秒后自动消失
+        setEnhanceNote(t('enhanceNoMore'));
+        setTimeout(() => setEnhanceNote(null), 4000);
       }
     } finally {
       setEnhanceProgress(null);
@@ -136,6 +182,13 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           ruleChaptersRef.current = bookChapters.chapters;
           setCanEnhance(canEnhanceWithModel(bookChapters));
           containerRef.current?.style.setProperty('view-transition-name', `book-info-${bookId}`);
+          // 规则完全没识别出目录（none）→ 打开时自动跑一次模型（模型已预取则秒开、
+          // 省流量/慢网未缓存则回退到手动按钮）。见 canAutoEnhance。
+          if (bookChapters.confidence === 'none' && canEnhanceWithModel(bookChapters)) {
+            canAutoEnhance(bookChapters.lang).then((ok) => {
+              if (ok) void runEnhance(true);
+            });
+          }
         });
       })
       .catch(() => {
@@ -172,7 +225,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                   .class('wr-reader-progress-text')
                   .text(() => {
                     const p = enhanceProgress() ?? 0;
-                    return p > 0 ? `${t('modelDownloading')} ${p}%` : t('modelEnhancing');
+                    const label = enhancePhase() === 'detect' ? t('modelEnhancing') : t('modelDownloading');
+                    return p > 0 ? `${label} ${p}%` : label;
                   }),
               ),
         }),
@@ -187,11 +241,17 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                 void runEnhance();
               }),
         }),
+        // 手动增强无改善的短暂提示
+        Show({
+          when: () => enhanceNote() !== null && enhanceProgress() === null,
+          children: () => Span().class('wr-reader-enhance-note').text(() => enhanceNote() ?? ''),
+        }),
       );
 
   // ── 桌面：双列 + 上/下页按钮 ──────────────────────────────────────────────
-  const desktopLayout = (): ElementBuilder =>
-    Div()
+  const desktopLayout = (): ElementBuilder => {
+    bindKeyboardPaging();
+    return Div()
       .class('wr-reader wr-reader-desktop')
       .children(
         Div()
@@ -238,6 +298,13 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                         View('r-icon').class('wr-rot-90').attr('name', 'more').cssVar('--ran-icon-font-size', ICON_FONT_SIZE),
                         Span().text(t('previous_page')),
                       ),
+                    // 阅读位置指示（与移动端对齐）：当前页 / 总页
+                    Span()
+                      .class('wr-reader-nav-pos')
+                      .text(() => {
+                        const total = tree().totalPage;
+                        return total ? `${Math.min(pageNum() + 1, total + 1)} / ${total + 1}` : '';
+                      }),
                     Div()
                       .class('wr-reader-nav-btn')
                       .on('click', () => next(2))
@@ -253,6 +320,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           ),
         renderBookDetailOperate(),
       );
+  };
 
   // ── 移动：单列 + 触控翻页 + 上/下 chrome 栏 ───────────────────────────────
   const mobileLayout = (): ElementBuilder => {

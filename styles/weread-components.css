@@ -147,6 +147,14 @@
     0 2px 4px rgba(0, 0, 0, 0.12),
     0 22px 40px -16px rgba(0, 0, 0, 0.5);
 }
+/* 键盘焦点环（Geist）：书卡聚焦时给封面描 primary 环。 */
+.wr-book-card:focus-visible {
+  outline: none;
+}
+.wr-book-card:focus-visible .wr-cover {
+  outline: 2px solid var(--ran-color-primary);
+  outline-offset: 3px;
+}
 .wr-book-card-meta {
   padding: 0 0.15rem;
 }
@@ -173,14 +181,19 @@
     var(--ran-color-bg-subtle);
 }
 
-/* 品牌字标顶栏 */
+/* 品牌字标顶栏 —— Geist 粘性薄条：半透 + 单层 blur + 底部 hairline，内容对齐容器宽。 */
 .wr-home-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: var(--wr-content-width);
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem 0;
+  padding: 0.7rem max(1.5rem, calc((100% - var(--wr-content-width)) / 2));
+  background: color-mix(in srgb, var(--ran-color-bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--ran-color-border);
 }
 .wr-home-brand {
   display: flex;
@@ -194,12 +207,13 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 13px;
-  background: linear-gradient(135deg, var(--ran-color-primary), var(--ran-color-primary-active));
-  color: #fff;
+  /* 墨色单色徽标：亮=黑底白字、暗=白底黑字（contrast token 自翻转）。 */
+  background: var(--ran-color-contrast-bg);
+  color: var(--ran-color-contrast-text);
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--ran-color-primary) 55%, transparent);
+  box-shadow: var(--ran-shadow-elevated);
 }
 .wr-home-name {
   font-size: 1.2rem;
@@ -215,15 +229,48 @@
 
 /* 搜索区 */
 .wr-home-search {
-  padding: 2.25rem 1rem 0;
+  padding: 3rem 1rem 0;
 }
-.wr-home-input {
-  display: block;
+/* 输入框 + "/" 提示芯片的定位容器（承接原 input 的宽度/居中）。 */
+.wr-home-search-field {
+  position: relative;
   width: 50%;
   min-width: 18rem;
   max-width: 40rem;
-  height: 3.4rem;
   margin: 0 auto;
+  border-radius: 2rem;
+}
+.wr-home-search-field:focus-within {
+  box-shadow: var(--ran-focus-ring);
+}
+.wr-home-input {
+  display: block;
+  width: 100%;
+  height: 3.4rem;
+}
+/* "/" 快捷键提示芯片（键帽），聚焦或有输入时隐藏。 */
+.wr-home-kbd {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  font-family: var(--ran-font-mono, ui-monospace, monospace);
+  font-size: 0.8rem;
+  color: var(--ran-color-text-secondary);
+  background: var(--ran-color-bg-muted);
+  border: 1px solid var(--ran-color-border);
+  border-radius: var(--ran-radius-sm, 6px);
+  pointer-events: none;
+  transition: opacity var(--ran-motion-duration-fast, 0.15s);
+}
+.wr-home-search-field:focus-within .wr-home-kbd {
+  opacity: 0;
 }
 .wr-home-panel {
   overflow: hidden;
@@ -322,7 +369,9 @@
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ran-color-border);
 }
 .wr-home-shelf-title {
   font-size: 1.4rem;
@@ -398,6 +447,16 @@
 }
 .wr-home-add:hover .wr-home-add-inner {
   transform: translateY(-6px);
+  border-color: var(--ran-color-primary);
+  color: var(--ran-color-primary);
+  --ran-icon-color: var(--ran-color-primary);
+}
+.wr-home-add:focus-visible {
+  outline: none;
+}
+.wr-home-add:focus-visible .wr-home-add-inner {
+  outline: 2px solid var(--ran-color-primary);
+  outline-offset: 3px;
   border-color: var(--ran-color-primary);
   color: var(--ran-color-primary);
   --ran-icon-color: var(--ran-color-primary);
@@ -657,6 +716,11 @@
 .wr-reader-enhance-link:hover {
   background: color-mix(in srgb, var(--ran-color-primary) 20%, transparent);
 }
+.wr-reader-enhance-note {
+  font-size: 0.85rem;
+  color: var(--ran-color-text-secondary);
+  white-space: nowrap;
+}
 .wr-reader-progress {
   display: flex;
   align-items: center;
@@ -720,6 +784,13 @@
   flex: none;
   height: 4rem;
 }
+.wr-reader-nav-pos {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--ran-color-text-secondary);
+  user-select: none;
+}
 .wr-reader-nav-btn {
   display: flex;
   align-items: center;
@@ -745,6 +816,14 @@
   color: var(--ran-color-text);
   box-shadow: var(--ran-shadow-menu);
   --ran-icon-color: var(--ran-color-text);
+}
+/* 键盘焦点环（Geist）——阅读页可交互元素统一。 */
+.wr-reader-nav-btn:focus-visible,
+.wr-reader-home:focus-visible,
+.wr-reader-book-title:focus-visible,
+.wr-operate-trigger:focus-visible {
+  outline: 2px solid var(--ran-color-primary);
+  outline-offset: 2px;
 }
 
 /* 移动：单列 + chrome 栏 */

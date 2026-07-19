@@ -42,15 +42,20 @@ for (const file of fs.readdirSync(toAbsolute('../dist/client'))) {
   fs.cpSync(toAbsolute(`../dist/client/${file}`), toAbsolute(`../dist/${file}`), { recursive: true });
 }
 
-// 4) 把资源清单注入 sw.js 头部（precache 列表），只做一次。
+// 4) 注入 sw.js 头部：BUILD_ID（时间戳，每次构建都变）+ 资源预缓存清单。
+//    BUILD_ID 变 → sw.js 字节变 → 浏览器检测到新 SW；缓存名带 BUILD_ID，激活时清理旧版本，
+//    避免「代码更新了却一直吃旧缓存」。模型缓存用固定名不受影响（见 public/sw.js）。
 const swPath = toAbsolute('../dist/sw.js');
 if (fs.existsSync(swPath)) {
+  const buildId = new Date().toISOString().replace(/[:.]/g, '-'); // 可读时间戳，便于线上排查版本
   const assetsString = fs
     .readdirSync(distAssets)
     .map((asset) => `"/weread/assets/${asset}"`)
     .join(',');
   const swContent = fs.readFileSync(swPath, 'utf-8');
-  fs.writeFileSync(swPath, `const SERVICE_WORK_CACHE_FILE_PATHS = [${assetsString}];` + swContent);
+  const banner = `const BUILD_ID = ${JSON.stringify(buildId)};\nconst SERVICE_WORK_CACHE_FILE_PATHS = [${assetsString}];\n`;
+  fs.writeFileSync(swPath, banner + swContent);
+  console.log(`[build-ssg] injected sw.js BUILD_ID=${buildId} (${fs.readdirSync(distAssets).length} precache assets)`);
 }
 
 // 5) 逐路由注入 SSR 外壳。共享模板来自 dist/client/views/index.html。

@@ -32,5 +32,6 @@
   "enhanceCatalogue": "AI 增强目录",
   "enhanceHint": "规则识别可能漏章，点击用 AI 模型重新识别（首次需下载模型）",
   "modelDownloading": "下载模型",
-  "modelEnhancing": "识别中"
+  "modelEnhancing": "识别中",
+  "enhanceNoMore": "未发现更多章节"
 }
