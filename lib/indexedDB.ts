@@ -81,6 +81,10 @@ export class WebDB {
         if (this.database && !this.database.objectStoreNames.contains('books_chapters')) {
           this.database.createObjectStore('books_chapters', { keyPath: 'id' });
         }
+        // v3：阅读进度（续读），key 为书籍 id，与 books_info 分开避免翻页重写整本 content
+        if (this.database && !this.database.objectStoreNames.contains('books_progress')) {
+          this.database.createObjectStore('books_progress', { keyPath: 'id' });
+        }
         resolve({
           status: 'success',
           data: {

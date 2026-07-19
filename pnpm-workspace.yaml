@@ -8,8 +8,6 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
   sharp: false
+# ranui 是本仓自己维护/发布的包，整体豁免最小发布时长（minimumReleaseAge）检查
 minimumReleaseAgeExclude:
-  - ranui@0.2.1-alpha.3
-  - ranui@0.2.1-alpha.4
-  - ranui@0.2.1-alpha.5
-  - ranui@0.3.1-alpha.1
+  - ranui
