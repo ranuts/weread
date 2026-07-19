@@ -35,5 +35,7 @@
   "modelEnhancing": "识别中",
   "enhanceNoMore": "未发现更多章节",
   "edit_catalogue": "编辑目录",
-  "delete_chapter": "删除章节"
+  "delete_chapter": "删除章节",
+  "delete_book": "删除",
+  "delete_book_confirm": "删除《{{0}}》？此操作不可撤销。"
 }

@@ -1,6 +1,6 @@
 import { db } from '@/store/index';
-import { CHAPTER_ALGO_VERSION, collectCandidates, detectChaptersDetailed } from '@/lib/chapter';
-import type { Candidate, ChapterConfidence, DetectedChapter } from '@/lib/chapter';
+import { CHAPTER_ALGO_VERSION } from '@/lib/chapter';
+import type { ChapterConfidence, DetectedChapter } from '@/lib/chapter';
 import { detectChaptersWithModel } from '@/lib/chapter/modelDetect';
 import { ChapterClassifier } from '@/lib/nlp';
 import type { ModelProgress } from '@/lib/nlp';
@@ -10,8 +10,20 @@ import { arrayBufferToString, extractCaptionTitleChapters } from '@/lib/transfor
 
 export const STORE_NAME_BOOKS_CHAPTERS_KEY = 'books_chapters';
 
-/** 章节结果来源：caption 标注 / 规则识别 / 模型增强 / 用户手动修正 */
-export type ChapterSource = 'caption' | 'rules' | 'model' | 'manual';
+/**
+ * 章节结果来源：
+ * - `caption`：文本内显式 `<caption-title>` 标注（权威，非规则猜测）
+ * - `model`：逐行模型识别（唯一的自动识别路径）
+ * - `manual`：用户手动修正
+ * - `pending`：尚未识别（等模型跑），不写缓存
+ * 说明：规则模式匹配（第X章/Chapter N）已弃用——真实语料只 54% 覆盖且打地鼠，见
+ * docs/chapter-detection-journey.md 经验 3。规则模块文件保留但不再参与识别。
+ */
+export type ChapterSource = 'caption' | 'model' | 'manual' | 'pending';
+
+/** 该语言是否有可用的章节识别模型（'other' 等无模型语言无法自动识别）。 */
+export const hasModelForLang = (lang: BookLang | undefined): boolean =>
+  lang !== undefined && modelIdForLang(lang) !== undefined;
 
 export interface BookChapters {
   /** 书籍 id（与 books_info 同 key） */
@@ -39,6 +51,10 @@ export const getCachedChapters = async (id: string): Promise<BookChapters | null
     if (!record || !Array.isArray(record.chapters)) {
       return null;
     }
+    // 弃用规则识别后，旧的 source:'rules' 缓存视为未命中 → 重新用模型识别（迁移）。
+    if ((record.source as string) === 'rules') {
+      return null;
+    }
     if (record.source !== 'manual' && record.algoVersion !== CHAPTER_ALGO_VERSION) {
       return null;
     }
@@ -61,17 +77,19 @@ export const saveChapters = async (record: Omit<BookChapters, 'algoVersion' | 'm
 };
 
 /**
- * resolveBookChapters 刚算过的中间产物，供紧随其后的 `enhanceChaptersWithModel` 复用，
- * 免掉重复的 decode（大书上百万字符）+ 规则全文扫描。阅读场景一次一本，只留最近一本；
- * 换书或缓存命中（未重算）时 id 不匹配，enhance 自动回退到重算，语义安全。
+ * resolveBookChapters 刚算过的中间产物（解码文本 + 语言），供紧随其后的 `detectChaptersByModel`
+ * 复用，免掉重复 decode（大书上百万字符）。阅读场景一次一本，只留最近一本；
+ * 换书或缓存命中（未重算）时 id 不匹配，识别自动回退到重新 decode，语义安全。
  */
-let resolveMemo: { id: string; text: string; lang: BookLang; candidates: Candidate[] } | null = null;
+let resolveMemo: { id: string; text: string; lang: BookLang } | null = null;
 
 /**
- * 解析一本书的章节：缓存命中直接返回；否则依次尝试
- * <caption-title> 标注 → 规则识别，并把结果写入缓存。
- * 返回的 chapters 偏移基于「解码后换行归一化为 \n」的文本，
- * 与 transformTextToExpectedFormat 内部使用的文本一致。
+ * 解析一本书的章节（**模型优先，不跑规则**）：
+ * 1. 缓存命中（model/manual/caption）直接返回——开书秒出。
+ * 2. 文本内显式 `<caption-title>` 标注（权威）→ 直接成目录并缓存。
+ * 3. 否则返回 `source:'pending'` 空章节（整本一章，立即可读），**不写缓存**；
+ *    调用方随后跑模型（`detectChaptersByModel`）并缓存 `source:'model'`。
+ * 返回的 chapters 偏移基于「解码后换行归一化为 \n」的文本，与 transformText 内部一致。
  */
 export const resolveBookChapters = async (
   id: string,
@@ -85,9 +103,8 @@ export const resolveBookChapters = async (
   const lang = detectLanguage(text);
 
   const captionChapters = extractCaptionTitleChapters(text);
-  let record: Omit<BookChapters, 'algoVersion' | 'modifyTime'>;
   if (captionChapters.length > 0) {
-    record = {
+    const record: Omit<BookChapters, 'algoVersion' | 'modifyTime'> = {
       id,
       chapters: captionChapters.map((item) => ({ title: item.title, start: item.start, end: item.end ?? text.length })),
       confidence: 'high',
@@ -95,67 +112,34 @@ export const resolveBookChapters = async (
       source: 'caption',
       lang,
     };
-  } else {
-    // 候选只算一次：既喂规则验证，又备给可能紧随的模型增强（union 用同一份规则候选）
-    const candidates = collectCandidates(text);
-    const detection = detectChaptersDetailed(text, candidates);
-    record = {
-      id,
-      chapters: detection.chapters,
-      confidence: detection.confidence,
-      familyId: detection.familyId,
-      source: 'rules',
-      lang,
-    };
-    resolveMemo = { id, text, lang, candidates };
+    await saveChapters(record);
+    return { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
   }
-  await saveChapters(record);
-  return { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
-};
 
-/**
- * 是否值得对这本书做模型增强：规则置信度低（可能漏章）、且该语言有已部署的模型、
- * 且当前不是手动修正结果（手动优先）。UI 据此决定要不要显示「AI 增强」入口。
- */
-export const canEnhanceWithModel = (record: BookChapters): boolean => {
-  if (record.source === 'manual' || record.source === 'model') {
-    return false;
-  }
-  if (record.confidence === 'high') {
-    return false;
-  }
-  return record.lang !== undefined && modelIdForLang(record.lang) !== undefined;
+  // 交给模型识别：先出空章节（整本一章）让 reader 立即可读，不缓存。memo 供紧随的模型识别复用解码文本/语言。
+  resolveMemo = { id, text, lang };
+  return { id, chapters: [], confidence: 'none', familyId: null, source: 'pending', lang, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
 };
 
 // 语言模型客户端单例：切换语言时才重建，避免重复下载
 let classifier: ChapterClassifier | null = null;
 let loadedModelId: string | null = null;
 
-export interface EnhanceOptions {
+export interface DetectOptions {
   onProgress?: (progress: ModelProgress) => void;
   threshold?: number;
 }
 
-/** 模型增强结果：record 为写入缓存的记录；improved 表示是否比规则找到了更多章节。 */
-export interface EnhanceResult {
-  record: BookChapters;
-  improved: boolean;
-}
-
 /**
- * 用语言模型重新识别章节，**无论是否改善都写缓存（source: 'model'）**——这样
- * `canEnhanceWithModel` 之后判 false，重开该书不再自动/手动重跑推理（一次尝试即终态，
- * 避免每次打开都跑几十秒模型）。improved 为 false 时保留规则章节、供调用方给「未发现更多章节」反馈。
- * 该语言无模型时返回 null（调用方保持规则结果）。模型懒加载：首次调用才下载。
- * 复用 resolveBookChapters 的中间产物（text/lang/候选），免掉重复 decode + 规则扫描。
+ * **纯模型**章节识别（唯一自动识别路径）。逐行模型分类 → 过阈值的行即章节 → 缓存 `source:'model'`
+ * （无论找到几章都写缓存，重开直接用、不再跑推理）。该语言无模型时返回 null（无法识别，保持整本一章）。
+ * 模型懒加载：首次调用才下载（之后经 SW / 浏览器缓存永久命中）。复用 resolveBookChapters 的解码文本/语言。
  */
-export const enhanceChaptersWithModel = async (
+export const detectChaptersByModel = async (
   id: string,
   content: ArrayBuffer | Uint8Array<ArrayBuffer>,
-  ruleChapters: DetectedChapter[],
-  options: EnhanceOptions = {},
-): Promise<EnhanceResult | null> => {
-  // 紧随 resolveBookChapters 时命中 memo，直接复用其解码文本 / 语言 / 规则候选
+  options: DetectOptions = {},
+): Promise<BookChapters | null> => {
   const memo = resolveMemo?.id === id ? resolveMemo : null;
   const text = memo?.text ?? (arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '');
   const lang = memo?.lang ?? detectLanguage(text);
@@ -170,31 +154,28 @@ export const enhanceChaptersWithModel = async (
     loadedModelId = modelId;
   }
   const activeClassifier = classifier;
-  // 推理进度透传：worker 分批时以 status:'classifying' 上报 0-100，
-  // 经 detectChaptersWithModel → classifyLines → 同一 onProgress 回到 UI（下载%→识别%）。
+  // 推理进度透传：worker 分批以 status:'classifying' 上报 0-100 → 同一 onProgress 回 UI（下载%→识别%）。
   const chapters = await detectChaptersWithModel(
     text,
     (inputs, onProgress) => activeClassifier.classifyLines(inputs, { onProgress }),
-    { threshold: options.threshold, onProgress: options.onProgress, candidates: memo?.candidates },
+    { threshold: options.threshold, onProgress: options.onProgress },
   );
-  // 模型没找到更多章节则保留规则结果（避免越增强越差），但仍缓存 source:'model' 标记「已尝试」
-  const improved = chapters.length > ruleChapters.length;
   const record: Omit<BookChapters, 'algoVersion' | 'modifyTime'> = {
     id,
-    chapters: improved ? chapters : ruleChapters,
-    confidence: improved ? 'high' : 'none',
+    chapters,
+    confidence: chapters.length > 0 ? 'high' : 'none',
     familyId: null,
     source: 'model',
     lang,
   };
   await saveChapters(record);
-  return { record: { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() }, improved };
+  return { ...record, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
 };
 
 /**
- * 保存用户手动编辑后的章节（source:'manual'）。manual 记录跨 algoVersion 永久有效、
- * `canEnhanceWithModel` 判 false——既是标注飞轮，也是规则/模型差结果的终态纠正出口。
- * 章节变了，清掉 resolveMemo 以免后续误用旧候选。
+ * 保存用户手动编辑后的章节（source:'manual'）。manual 记录跨 algoVersion 永久有效（缓存命中即终态、
+ * 不再跑模型）——既是标注飞轮，也是模型差结果的终态纠正出口。
+ * 章节变了，清掉 resolveMemo 以免后续误用旧文本。
  */
 export const saveManualChapters = async (
   id: string,

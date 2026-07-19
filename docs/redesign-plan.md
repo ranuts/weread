@@ -25,7 +25,8 @@
 | **Vercel 质感深修** | 🚧 进行中 | 见 §二 |
 | 目录高亮当前章节 | ✅ 已交付 | 当前章左侧墨色竖条 + 提亮，浮层打开/翻页自动滚入视口（IntersectionObserver）；见 §三-1 |
 | 搜索结果键盘导航 | ✅ 已交付 | 首页 + 书内搜索均支持 ↑/↓ 移高亮、Enter 打开/跳页；见 §三-2 |
-| 大书分页移出主线程 | ⬜ 规划（性能） | 见 §三-3 |
+| 大书分页性能 | ✅ 已交付 | 分页算法 5× 提速（910K 字 17ms）+ 撤掉挂起的分页 Worker，大书秒开；见 §三-3 |
+| 章节识别改纯模型无感 | ✅ 已交付 | 弃规则、纯模型 + 页面加载预取 + 目录 loading + SW 缓存；见 §三-4 / journey §12 |
 
 ---
 
@@ -56,10 +57,15 @@
 - **方案**：首页搜索面板加 roving `↑/↓` 选中（`aria-activedescendant` + `.is-highlighted`），`Enter` 打开高亮项、无高亮时打开第一条，`Esc` 已接管清空。书内搜索同理跳页。
 - **注意**：与全局 `onKey` 协作——输入聚焦时 `↑↓/Enter` 归搜索面板，不触发翻页。
 
-### 3. 大书分页移出主线程（性能）
-- **痛点**：`transformTextToExpectedFormat` 对整本书同步分页，大书（如《三国》《国富论》）会**卡死主线程数秒**（实测 devtools 下截图/求值都超时）。
-- **方案**：分页测量搬进 Worker 或 `requestIdleCallback` 分片；先出首屏两页、其余增量补算；加载态用骨架/进度。测量依赖真实 `clientWidth/Height`，需把量取的尺寸传给 worker（worker 无 DOM），或用 `OffscreenCanvas`/预估字符宽度做近似分页再回填。
-- **验证**：打开《国富论》，首屏 < 1s 可读且可翻页，主线程不长时间阻塞。
+### 3. 大书分页性能（✅ 已交付，结论与初判不同）
+- **真因**：以为是分页卡主线程，实测后发现分页根本不慢——真凶是「分页 Worker 挂起」（首版 worker 不 postMessage 回来、无超时兜底 → loading 永挂）+ **模型自动增强**（英文书 `confidence:none` 触发下 67MB 模型）。分页算法本身：优化后**910K 字 → 17ms**（《三国》1916 页 / Walden 1443 页 **秒开**）。
+- **做法**：① 分页算法优化——`charCode` 查表替每字符正则、`text.slice` 一次切页替逐字符 `+=` 拼串，**约 5×**（90ms→17ms），纯核心 `lib/paging.ts`（`pagingTextCore` / `buildTextSyntaxTree`），语法树 3/3 测试逐字节不变。② **撤掉分页 Worker**（over-engineering + 有挂起 bug；17ms 单帧同步即可，无冻结、无 loading）。③ 章节识别改纯模型异步（见下），reader 立即可读、目录显 loading。
+- **验证**：《三国》1916 页、Walden 1443 页均秒开，主线程全程可交互（截图/求值不再超时）。
+
+### 4. 章节识别改「纯模型 + 无感自动」（✅ 已交付，见 chapter-detection-journey §12）
+- **要求**：弃规则匹配（打地鼠、54% 覆盖，见 journey §3）；只用模型，且对用户无感——页面加载即后台预取模型 + SW 缓存，没好就目录显 loading。
+- **做法**：`detectChaptersWithModel` 去 union+validate（逐行过阈值直接成章）；`resolveBookChapters` 缓存/caption/pending 三态、不跑规则；reader model-first（pending → 模型识别，整本一章可读 + 目录 loading）；打开页面即 `prefetchModelsForLangs([uiLang()])`；旧 `source:'rules'` 缓存迁移重识别。**权衡**：去 validate 后模型假阳性直进目录（用户接受，靠 per-lang 模型精度 + 手动编辑兜底）。
+- **验证**：清缓存开 Walden → 整本一章立即可读 → 目录「Detecting」→ 模型出「1854/WALDEN/ECONOMY/SOLITUDE」、reader 重排、当前章高亮、缓存 model 重开不跑。
 
 ---
 

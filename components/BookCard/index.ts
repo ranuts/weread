@@ -1,6 +1,8 @@
+import 'ranui/icon';
 import { Div, View, batch, createRef } from 'ranui/builder';
 import { setCurrentBookDetail, setPageNum, setTextSyntaxTree } from '@/lib/subscribe';
 import { ROUTE_PATH } from '@/router';
+import { t } from '@/locales';
 import type { ElementBuilder } from 'ranui/builder';
 import type { BookInfo } from '@/store/books';
 
@@ -64,11 +66,18 @@ const generatedCover = (title: string, author: string): ElementBuilder => {
 /**
  * 书架卡片：一张「书」——有封面用封面，无封面生成渐变书封（typeset 标题/作者）。
  * 点击清空阅读态并整页跳转书详情，支持时用 View Transition 做 `book-info-${id}` 共享元素 morph。
+ * 传 `onDelete` 时右上角出现悬停显现的删除按钮（阻止冒泡，不触发导航）。
  */
-export const renderBookCard = (book: BookInfo): ElementBuilder => {
+export const renderBookCard = (book: BookInfo, onDelete?: (id: string) => void): ElementBuilder => {
   const { id, image, title = '', author = '' } = book || {};
   const ref = createRef<HTMLAnchorElement>();
   const href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
+
+  const onDeleteClick = (e: Event): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete?.(id);
+  };
 
   const toDetail = (e: Event): void => {
     e.preventDefault(); // 由 startViewTransition 接管导航，morph 才生效
@@ -108,5 +117,19 @@ export const renderBookCard = (book: BookInfo): ElementBuilder => {
           Div().class('wr-book-card-title truncate').attr('title', title).text(title),
           Div().class('wr-book-card-author truncate').attr('title', author).text(author),
         ),
+      onDelete
+        ? Div()
+            .class('wr-book-card-del')
+            .attr('role', 'button')
+            .attr('tabindex', '0')
+            .attr('title', t('delete_book'))
+            .attr('aria-label', `${t('delete_book')} ${title}`)
+            .on('click', onDeleteClick)
+            .on('keydown', (e: Event) => {
+              const ke = e as KeyboardEvent;
+              if (ke.key === 'Enter' || ke.key === ' ') onDeleteClick(e);
+            })
+            .children(View('r-icon').attr('name', 'close').cssVar('--ran-icon-font-size', '15px'))
+        : null,
     );
 };

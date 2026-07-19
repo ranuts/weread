@@ -135,11 +135,52 @@
 
 /* ── BookCard（书架格）─────────────────────────────────────────────────────── */
 .wr-book-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
   text-decoration: none;
   cursor: pointer;
+}
+/* 删除按钮：封面右上角，悬停/聚焦显现，hover 变危险红。触屏无 hover 常显。 */
+.wr-book-card-del {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: var(--ran-radius-full, 9999px);
+  background: color-mix(in srgb, var(--ran-color-bg) 62%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: var(--ran-shadow-elevated);
+  --ran-icon-color: var(--ran-color-text);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity var(--ran-motion-duration-base, 0.2s),
+    transform var(--ran-motion-duration-base, 0.2s) var(--wr-ease-spring),
+    background var(--ran-motion-duration-base, 0.2s);
+}
+.wr-book-card:hover .wr-book-card-del,
+.wr-book-card-del:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+.wr-book-card-del:hover {
+  background: var(--ran-color-danger);
+  --ran-icon-color: #fff;
+}
+@media (hover: none) {
+  .wr-book-card-del {
+    opacity: 0.92;
+    transform: scale(1);
+  }
 }
 .wr-book-card:hover .wr-cover {
   transform: translateY(-8px) scale(1.015);
@@ -543,6 +584,33 @@
 .wr-catalogue-sort-icon.UP {
   transform: rotate(180deg);
 }
+/* 章节自动识别状态条（目录内就地）：识别中 loading / 省流量手动按钮。 */
+.wr-catalogue-detect {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: none;
+  padding: 0.55rem 1.75rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--ran-color-text-secondary);
+  --ran-icon-color: var(--ran-color-text-secondary);
+}
+.wr-catalogue-detect r-loading {
+  display: inline-flex;
+  zoom: 0.5; /* circle-fold 内部固定尺寸，用 zoom 整体缩小到与文案匹配 */
+}
+.wr-catalogue-detect-text {
+  font-variant-numeric: tabular-nums;
+}
+.wr-catalogue-detect-btn {
+  cursor: pointer;
+  color: var(--ran-color-link);
+  font-weight: 500;
+}
+.wr-catalogue-detect-btn:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .wr-catalogue-list {
   flex: auto;
   overflow-y: auto;
@@ -813,17 +881,6 @@
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 24px 48px -28px rgba(0, 0, 0, 0.32);
-}
-/* 分页加载遮罩：盖住纸面，中央转圈（Worker 计算大书语法树时）。 */
-.wr-reader-loading {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ran-color-bg-elevated);
-  border-radius: inherit;
 }
 .wr-reader-chapter {
   font-size: 0.78rem;

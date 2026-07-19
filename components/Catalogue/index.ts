@@ -1,6 +1,15 @@
 import 'ranui/icon';
-import { Div, Index, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
-import { EVENT_NAME, getCurrentBookDetail, getPageNum, getTextSyntaxTree, setPageNum, syncHook } from '@/lib/subscribe';
+import 'ranui/loading';
+import { Div, Index, Show, Span, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
+import {
+  EVENT_NAME,
+  getChapterDetect,
+  getCurrentBookDetail,
+  getPageNum,
+  getTextSyntaxTree,
+  setPageNum,
+  syncHook,
+} from '@/lib/subscribe';
 import { fromStore } from '@/lib/reactive';
 import { SORT_DIRECTION } from '@/lib/enums';
 import { deleteChapter, editableCount, renameChapter } from '@/lib/chapterEdit';
@@ -61,6 +70,8 @@ export const renderCatalogue = (): ElementBuilder => {
   const bookDetail = fromStore(getCurrentBookDetail, EVENT_NAME.SET_CURRENT_BOOK_DETAIL);
   const tree = fromStore(getTextSyntaxTree, EVENT_NAME.SET_TEXT_SYNTAX_TREE);
   const pageNum = fromStore(getPageNum, EVENT_NAME.SET_CURRENT_BOOK_PAGE);
+  // 章节自动识别状态（阅读页共享）：detecting 显进度圈、available 显手动按钮。
+  const detect = fromStore(getChapterDetect, EVENT_NAME.SET_CHAPTER_DETECT);
 
   const scrollRef = createRef<HTMLDivElement>();
   const [sortDirection, setSortDirection] = signal(SORT_DIRECTION.DOWN);
@@ -149,6 +160,38 @@ export const renderCatalogue = (): ElementBuilder => {
             .cssVar('--ran-icon-font-size', SORT_ICON_FONT_SIZE)
             .on('click', toSort),
         ),
+      // 章节自动识别状态条：识别中显进度圈；省流量场景显手动「识别更多章节」按钮。
+      Show({
+        when: () => detect().status === 'detecting',
+        children: () =>
+          Div()
+            .class('wr-catalogue-detect')
+            .children(
+              View('r-loading')
+                .attr('name', 'circle-fold')
+                .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
+              Span()
+                .class('wr-catalogue-detect-text')
+                .text(() => {
+                  const d = detect();
+                  const label = d.phase === 'detect' ? t('modelEnhancing') : t('modelDownloading');
+                  return d.progress > 0 ? `${label} ${d.progress}%` : label;
+                }),
+            ),
+      }),
+      Show({
+        when: () => detect().status === 'available',
+        children: () =>
+          Div()
+            .class('wr-catalogue-detect')
+            .children(
+              View('a')
+                .class('wr-catalogue-detect-btn')
+                .attr('title', t('enhanceHint'))
+                .text(t('enhanceCatalogue'))
+                .on('click', () => syncHook.call(EVENT_NAME.RUN_ENHANCE)),
+            ),
+      }),
       Div()
         .class('wr-catalogue-list')
         .ref(scrollRef)

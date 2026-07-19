@@ -1,12 +1,7 @@
 import { makeModelInput } from '@/lib/nlp/features';
 import type { ModelProgress } from '@/lib/nlp/protocol';
-import { collectCandidates, MAX_TITLE_LENGTH } from './candidates';
-import type { Candidate } from './candidates';
-import { validateCandidates } from './validate';
+import { MAX_TITLE_LENGTH } from './candidates';
 import type { DetectedChapter } from './index';
-
-/** 模型判出的标题构成一个无编号家族，与规则家族一起竞争，交 validate 结构层过滤 */
-export const MODEL_FAMILY_ID = 'model';
 
 /** 句末标点：以这些结尾的行几乎不是标题，预过滤时排除（与 ml/textfeat.py TERMINAL_PUNCT 一致） */
 const TERMINAL_PUNCT = new Set('。！？.!?；;：:，,、');
@@ -43,14 +38,12 @@ export interface ModelDetectOptions {
   threshold?: number;
   /** 分批推理进度回调，透传给分类器 */
   onProgress?: (progress: ModelProgress) => void;
-  /** 可选：预先算好的规则候选（调用方已 collectCandidates 时传入，避免重复全文扫描） */
-  candidates?: Candidate[];
 }
 
 /**
- * @description: 模型增强的章节识别。只对「像标题的短行」跑模型（省算力，特征仍取真实前后行），
- * 模型判出的标题作为一个无编号家族，与规则候选 union 后交 `validate.ts` 结构层过滤
- * （家族竞争 / 间距 / 覆盖度）。结构化书规则家族胜出（更精确），语义书模型家族胜出。
+ * @description: **纯模型**章节识别（唯一路径，不再走规则候选/结构层）。只对「像标题的短行」
+ * 跑模型（够短 + 不以句末标点结尾——这是性能预过滤，非章节规则匹配；特征仍取真实前后行），
+ * 概率过阈值的行即为章节标题，按位置排序，`end` 取下一标题起点。逐行分类器的召回是识别的全部来源。
  * @param {string} text 已将换行归一化为 \n 的全文
  * @param {ClassifyLines} classify 逐行分类器（来自 ChapterClassifier）
  * @return {DetectedChapter[]}
@@ -84,27 +77,17 @@ export const detectChaptersWithModel = async (
   );
 
   const probs = inputs.length > 0 ? await classify(inputs, options.onProgress) : [];
-  const modelCands: Candidate[] = [];
+  // 概率过阈值的行即章节标题——模型输出直接成章，不再 union 规则 / 过结构层。
+  const titles: { title: string; start: number }[] = [];
   candIdx.forEach((i, k) => {
     if (probs[k] >= threshold) {
-      modelCands.push({
-        familyId: MODEL_FAMILY_ID,
-        special: false,
-        title: lines[i].text,
-        start: lines[i].start,
-        lineIndex: i,
-        seq: null,
-      });
+      titles.push({ title: lines[i].text, start: lines[i].start });
     }
   });
-
-  // union 规则候选 → 结构层过滤（家族竞争选出规则或模型家族）
-  const ruleCands = options.candidates ?? collectCandidates(text);
-  const all = [...ruleCands, ...modelCands];
-  const validation = validateCandidates(all, text.length);
-  return validation.chapters.map((chapter, index) => ({
-    title: chapter.title,
-    start: chapter.start,
-    end: validation.chapters[index + 1]?.start ?? text.length,
+  titles.sort((a, b) => a.start - b.start);
+  return titles.map((t, index) => ({
+    title: t.title,
+    start: t.start,
+    end: titles[index + 1]?.start ?? text.length,
   }));
 };
