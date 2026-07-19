@@ -815,6 +815,160 @@
   cursor: pointer;
 }
 
+/* ── 划线 / 高亮 ──────────────────────────────────────────────────────────────
+   关键：高亮**只加背景**、无 padding/border，保持布局中性，不影响已按纯文本度量的分页。
+   box-decoration-break:clone 让跨行高亮每行都有背景。 */
+.wr-mark {
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: pointer;
+}
+.wr-mark-yellow {
+  background-color: rgba(255, 208, 0, 0.38);
+}
+.wr-mark-green {
+  background-color: rgba(52, 199, 89, 0.32);
+}
+.wr-mark-blue {
+  background-color: rgba(10, 132, 255, 0.28);
+}
+.wr-mark-pink {
+  background-color: rgba(255, 55, 95, 0.28);
+}
+
+/* 划线操作浮层：定位到选区/高亮正上方。 */
+.wr-note-toolbar {
+  position: fixed;
+  z-index: 60;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: max-content;
+  max-width: 16rem;
+  padding: 0.55rem 0.65rem;
+  background: var(--ran-color-bg-elevated);
+  border: 1px solid var(--ran-color-border);
+  border-radius: var(--ran-radius-md, 12px);
+  box-shadow: var(--ran-shadow-menu);
+}
+.wr-note-colors {
+  display: flex;
+  gap: 0.5rem;
+}
+.wr-note-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--ran-motion-duration-base, 0.15s);
+}
+.wr-note-swatch:hover {
+  transform: scale(1.1);
+}
+.wr-note-swatch.is-active {
+  border-color: var(--ran-color-text-secondary);
+}
+.wr-note-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.wr-note-thought {
+  width: 14rem;
+  max-width: 100%;
+  padding: 0.4rem 0.5rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--ran-color-text);
+  background: var(--ran-color-bg-subtle);
+  border: 1px solid var(--ran-color-border);
+  border-radius: var(--ran-radius-sm, 8px);
+  resize: none;
+  outline: none;
+}
+.wr-note-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.wr-note-del {
+  font-size: 0.78rem;
+  color: var(--ran-color-danger, #e5484d);
+  cursor: pointer;
+}
+
+/* ── 笔记面板 ────────────────────────────────────────────────────────────────── */
+.wr-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 19rem;
+  max-height: 70vh;
+}
+.wr-notes-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ran-color-text);
+}
+.wr-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+}
+.wr-notes-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.55rem 0.6rem;
+  background: var(--ran-color-bg-subtle);
+  border-radius: var(--ran-radius-md, 10px);
+}
+.wr-notes-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  cursor: pointer;
+}
+.wr-notes-quote {
+  display: inline;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ran-color-text);
+}
+.wr-notes-thought {
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--ran-color-text-secondary);
+}
+.wr-notes-chapter {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--ran-color-text-secondary);
+  opacity: 0.75;
+}
+.wr-notes-del {
+  flex: none;
+  cursor: pointer;
+  --ran-icon-color: var(--ran-color-text-secondary);
+}
+.wr-notes-del:hover {
+  --ran-icon-color: var(--ran-color-text);
+}
+.wr-notes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 0;
+  --ran-icon-color: var(--ran-color-border);
+}
+.wr-notes-empty-text {
+  font-size: 0.82rem;
+  color: var(--ran-color-text-secondary);
+}
+
 /* ── 阅读设置面板（排版：字号/行距/边距/主题/字体）─────────────────────────── */
 .wr-settings {
   display: flex;

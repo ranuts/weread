@@ -56,5 +56,9 @@
   "theme_oled": "纯黑",
   "font_serif": "衬线",
   "font_sans": "黑体",
-  "reset_settings": "恢复默认"
+  "reset_settings": "恢复默认",
+  "my_notes": "划线与笔记",
+  "no_notes": "还没有划线",
+  "delete_note": "删除",
+  "note_thought_placeholder": "写点想法…"
 }

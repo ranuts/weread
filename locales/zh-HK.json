@@ -56,5 +56,9 @@
   "theme_oled": "純黑",
   "font_serif": "襯線",
   "font_sans": "黑體",
-  "reset_settings": "恢復預設"
+  "reset_settings": "恢復預設",
+  "my_notes": "劃線與筆記",
+  "no_notes": "還沒有劃線",
+  "delete_note": "刪除",
+  "note_thought_placeholder": "寫點想法…"
 }
