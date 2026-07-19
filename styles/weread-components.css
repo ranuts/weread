@@ -578,14 +578,22 @@
   color: var(--ran-color-text-secondary);
   word-break: break-all;
 }
+/* 目录工具行（单行）：左＝识别状态/按钮，右＝编辑/排序图标。space-between 对齐两端。 */
+.wr-catalogue-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex: none;
+  min-height: 2.6rem;
+  padding: 0.35rem 1.75rem 0.6rem;
+}
+/* 右侧图标组（原独立一行，现为工具行右端）。 */
 .wr-catalogue-sort {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 0.85rem;
   flex: none;
-  padding: 0 2.25rem;
-  height: 2.5rem;
   --ran-icon-color: var(--ran-color-text-secondary);
 }
 .wr-catalogue-edit {
@@ -602,15 +610,19 @@
   transform: rotate(180deg);
 }
 /* 章节自动识别状态条（目录内就地）：识别中 loading / 省流量手动按钮。 */
+/* 工具行左槽：容纳识别中状态或手动按钮（idle 时为空，图标靠 space-between 推到右端）。 */
 .wr-catalogue-detect {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  flex: none;
-  padding: 0.55rem 1.75rem 0.75rem;
+  min-width: 0;
   font-size: 0.85rem;
   color: var(--ran-color-text-secondary);
   --ran-icon-color: var(--ran-color-text-secondary);
+}
+.wr-catalogue-detect-status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 .wr-catalogue-detect r-loading {
   display: inline-flex;
@@ -781,7 +793,9 @@
 .wr-operate {
   position: absolute;
   top: 4rem;
-  right: 5.5rem;
+  /* 居中在正文卡与视口右缘之间的间隙里：原本 right:5.5rem 使按钮左缘正好贴住 78rem 正文卡右缘
+     （实测重叠 2px）。放到间隙中部，两侧都留出清晰空隙，不贴卡也不贴视口边。 */
+  right: 2.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;

@@ -143,56 +143,62 @@ export const renderCatalogue = (): ElementBuilder => {
             Div().class('wr-catalogue-author').text(() => bookDetail().author ?? ''),
           ),
         ),
+      // 工具行（单行）：左＝章节识别状态/按钮（idle 时为空），右＝编辑 + 排序图标。
+      // 合成一行，避免「图标独占一行、按钮又另起一行」的割裂与空高。
       Div()
-        .class('wr-catalogue-sort')
+        .class('wr-catalogue-toolbar')
         .children(
-          // 编辑切换：仅在有可编辑章节时显示
-          View('r-icon')
-            .class(() => `hover-icon wr-catalogue-edit ${editing() ? 'active' : ''}`)
-            .attr('name', 'setting')
-            .attr('title', t('edit_catalogue'))
-            .style('display', () => (editableCount() > 0 ? '' : 'none'))
-            .cssVar('--ran-icon-font-size', EDIT_ICON_FONT_SIZE)
-            .on('click', () => setEditing(!editing())),
-          View('r-icon')
-            .class(() => `hover-icon wr-catalogue-sort-icon ${sortDirection()}`)
-            .attr('name', 'sort')
-            .cssVar('--ran-icon-font-size', SORT_ICON_FONT_SIZE)
-            .on('click', toSort),
+          Div()
+            .class('wr-catalogue-detect')
+            .children(
+              // 识别中：进度圈 + 文案
+              Show({
+                when: () => detect().status === 'detecting',
+                children: () =>
+                  Div()
+                    .class('wr-catalogue-detect-status')
+                    .children(
+                      View('r-loading')
+                        .attr('name', 'circle-fold')
+                        .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
+                      Span()
+                        .class('wr-catalogue-detect-text')
+                        .text(() => {
+                          const d = detect();
+                          // 统一友好文案「分析章节中」，不暴露"下载模型/推理"等专业词；带进度百分比。
+                          return d.progress > 0 ? `${t('analyzingChapters')} ${d.progress}%` : t('analyzingChapters');
+                        }),
+                    ),
+              }),
+              // 可用：手动「重新生成目录 / 分析章节」按钮
+              Show({
+                when: () => detect().status === 'available',
+                children: () =>
+                  View('a')
+                    .class('wr-catalogue-detect-btn')
+                    .attr('title', t('enhanceHint'))
+                    .text(() => ((tree().titleIdTitle?.length ?? 0) > 1 ? t('regenerateCatalogue') : t('enhanceCatalogue')))
+                    .on('click', () => syncHook.call(EVENT_NAME.RUN_ENHANCE)),
+              }),
+            ),
+          Div()
+            .class('wr-catalogue-sort')
+            .children(
+              // 编辑切换：仅在有可编辑章节时显示
+              View('r-icon')
+                .class(() => `hover-icon wr-catalogue-edit ${editing() ? 'active' : ''}`)
+                .attr('name', 'setting')
+                .attr('title', t('edit_catalogue'))
+                .style('display', () => (editableCount() > 0 ? '' : 'none'))
+                .cssVar('--ran-icon-font-size', EDIT_ICON_FONT_SIZE)
+                .on('click', () => setEditing(!editing())),
+              View('r-icon')
+                .class(() => `hover-icon wr-catalogue-sort-icon ${sortDirection()}`)
+                .attr('name', 'sort')
+                .cssVar('--ran-icon-font-size', SORT_ICON_FONT_SIZE)
+                .on('click', toSort),
+            ),
         ),
-      // 章节自动识别状态条：识别中显进度圈；省流量场景显手动「识别更多章节」按钮。
-      Show({
-        when: () => detect().status === 'detecting',
-        children: () =>
-          Div()
-            .class('wr-catalogue-detect')
-            .children(
-              View('r-loading')
-                .attr('name', 'circle-fold')
-                .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
-              Span()
-                .class('wr-catalogue-detect-text')
-                .text(() => {
-                  const d = detect();
-                  // 统一友好文案「分析章节中」，不暴露"下载模型/推理"等专业词；带进度百分比。
-                  return d.progress > 0 ? `${t('analyzingChapters')} ${d.progress}%` : t('analyzingChapters');
-                }),
-            ),
-      }),
-      // 常驻手动入口：有模型即显示。已有多章 → 「重新生成目录」；仅整本一章 → 「分析章节」。随时可重跑。
-      Show({
-        when: () => detect().status === 'available',
-        children: () =>
-          Div()
-            .class('wr-catalogue-detect')
-            .children(
-              View('a')
-                .class('wr-catalogue-detect-btn')
-                .attr('title', t('enhanceHint'))
-                .text(() => ((tree().titleIdTitle?.length ?? 0) > 1 ? t('regenerateCatalogue') : t('enhanceCatalogue')))
-                .on('click', () => syncHook.call(EVENT_NAME.RUN_ENHANCE)),
-            ),
-      }),
       Div()
         .class('wr-catalogue-list')
         .ref(scrollRef)
