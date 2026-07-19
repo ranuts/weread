@@ -1,10 +1,11 @@
 import 'ranui/icon';
 import 'ranui/progress';
 import 'ranui/loading';
-import { getQuery } from 'ranuts/utils';
-import { Div, Span, View, createRef, onCleanup, signal } from 'ranui/builder';
+import { debounce, getQuery } from 'ranuts/utils';
+import { Div, Span, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import { getBookById } from '@/store/books';
 import { detectChaptersByModel, hasModelForLang, resolveBookChapters } from '@/store/chapters';
+import { getProgress, restorePage, saveProgress } from '@/store/progress';
 import { canAutoEnhance, prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
@@ -101,6 +102,12 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   // 章节自动识别（模型增强）状态经共享 store 上报，目录模块就地显 loading / 手动入口。
   let enhancing = false; // 重入保护
 
+  // 续读：进度恢复完成前不写，避免初始 page 0 覆盖已存进度。
+  let progressRestored = false;
+  const savePos = debounce(() => {
+    if (id) void saveProgress(id, pageNum(), tree().totalPage);
+  }, 700);
+
   const containerRef = createRef<HTMLDivElement>(); // book-info morph 目标
   const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器
   const contentRef: { current: ArrayBuffer | Uint8Array<ArrayBuffer> | null } = { current: null };
@@ -188,6 +195,14 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
         // 章节优先走 IndexedDB 缓存，未命中则识别并写缓存
         resolveBookChapters(bookId, content).then((bookChapters) => {
           paginateToTree({ content, title, chapters: bookChapters.chapters });
+          // 续读：恢复到上次页码（映射到当前分页），恢复完成后才允许保存。
+          getProgress(bookId).then((p) => {
+            if (p) {
+              const target = restorePage(p, getTextSyntaxTree().totalPage);
+              if (target > 0) setPageNum(target);
+            }
+            progressRestored = true;
+          });
           contentRef.current = content;
           containerRef.current?.style.setProperty('view-transition-name', `book-info-${bookId}`);
           // 注册目录编辑上下文（章节副本，供就地增删改后重建树 + 存 manual）
@@ -228,6 +243,12 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   // 打开阅读页即后台预取本地语言的章节模型（经 SW / 浏览器缓存），让「无感自动目录」尽量秒开；
   // 省流量/慢网/显式关闭时自动跳过（见 modelCache.networkAllowsDownload）。
   prefetchModelsForLangs([uiLang()]);
+  // 翻页/重排后防抖保存阅读进度（进度恢复完成后才存，避免初始 page 0 覆盖）。
+  createEffect(() => {
+    pageNum();
+    tree().totalPage;
+    if (progressRestored) savePos();
+  });
   // 容器挂载 + 布局后再跑分页（transformText 依赖真实 clientWidth/Height）
   if (id) requestAnimationFrame(() => loadBook(id));
   // 目录里「识别章节」按钮的手动出口（省流量/慢网场景）→ 跑一次模型识别
