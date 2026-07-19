@@ -30,12 +30,17 @@ export interface PageOptions {
 const INPUT_CSS_VARS: Record<string, string> = {
   '--ran-input-border-radius': '2rem',
   '--ran-input-content-border-radius': '2rem',
-  '--ran-input-content-padding': '10px',
+  // 高度 = 文本行 + 上下各 16px 对称内边距，文本由此「按构造」垂直居中，
+  // 不依赖 r-input 内部行的 flex 对齐（之前用 height/min-height 会让内部行顶对齐、
+  // 文本骑高、和 "/" 芯片错位）。content-min-height:0 关掉默认 32px 的顶对齐留白。
+  '--ran-input-content-padding': '16px 10px',
+  '--ran-input-content-min-height': '0',
   '--ran-input-content-font-size': '16px',
   '--ran-input-content-font-weight': '400',
   '--ran-icon-font-size': '20px',
   '--ran-icon-color': 'var(--icon-color-1)',
-  '--ran-icon-margin': '4px 0px 0px 16px',
+  // 顶边距 0，图标不偏下（ranui 默认已 align-items:center，无需再声明）。
+  '--ran-icon-margin': '0px 0px 0px 16px',
 };
 
 const PLUS_ICON_FONT_SIZE = '34px';

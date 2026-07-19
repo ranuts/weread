@@ -1,6 +1,7 @@
 import jschardet from 'jschardet';
 import { Locales, t } from '@/locales';
 import { detectChapters } from '@/lib/chapter';
+import { buildTextSyntaxTree, pagingTextCore } from '@/lib/paging';
 
 export interface TransformText {
   encoding: string;
@@ -104,202 +105,8 @@ export const getFontSize = (): number => {
  * @param {ChapterItem} extractedChapters 目录
  * @return {PagingTextResult}
  */
-export const pagingText = (content: string, container: HTMLElement): PagingTextResult => {
-  const text = content.replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
-  const total = text.length;
-  if (container) {
-    const { clientHeight, clientWidth } = container;
-    if (clientHeight < 30 || clientWidth < 30) {
-      return {
-        program: [],
-        total,
-        totalLine: 0,
-        fontSize: 0,
-        lineHeight: 0,
-        letterSpacing: 0,
-        charWidth: 0,
-        charsPerLine: 0,
-        pageTotalChar: 0,
-      };
-    }
-    // 字体大小，字体行高，字体间距，字体宽度
-    const rootFontSize = 16;
-    const fontSize = 1.125 * rootFontSize; // 字体大小 text-lg
-    const lineHeight = 0.25 * 10 * rootFontSize; // 行高（倍数）leading-10
-    const letterSpacing = 0.025 * rootFontSize; // 字符间距（em）tracking-wide
-    const charWidth = fontSize + letterSpacing; // 每个字符的宽度（px）
-    const charsPerLine = Math.floor(clientWidth / charWidth); // 每行能容纳的字符数
-    const totalLine = Math.floor(clientHeight / lineHeight); // 总行数
-    const pageTotalChar = charsPerLine * totalLine; // 每页总字符数
-    let useChar = 0;
-    const result: PagingTextItem[] = [];
-
-    // 辅助函数：检查是否是英文单词的一部分（包括连字符和半角字符）
-    const isWordPart = (char: string): boolean => {
-      // 匹配英文字母、数字、连字符、下划线、点号、逗号、感叹号、问号、分号、冒号、引号、括号等半角字符
-      return /[\w\-.,!?;:'"()[\]{}]/.test(char);
-    };
-
-    // 辅助函数：查找下一个单词的结束位置
-    const findNextWordEnd = (start: number): number => {
-      let pos = start;
-      let lastWordEnd = start;
-
-      while (pos < total) {
-        const char = text[pos];
-        if (isWordPart(char)) {
-          pos++;
-        } else if (char === ' ') {
-          // 如果遇到空格且正在处理单词，结束当前单词
-          lastWordEnd = pos;
-          pos++;
-          break;
-        } else {
-          pos++;
-        }
-      }
-      return lastWordEnd;
-    };
-
-    // 辅助函数：查找当前单词的开始位置
-    const findWordStart = (end: number): number => {
-      let pos = end;
-      let lastWordStart = end;
-
-      while (pos > 0) {
-        const char = text[pos - 1];
-        if (isWordPart(char)) {
-          lastWordStart = pos - 1;
-          pos--;
-        } else if (char === ' ') {
-          // 如果遇到空格且正在处理单词，结束当前单词
-          break;
-        } else {
-          pos--;
-        }
-      }
-      return lastWordStart;
-    };
-
-    while (total > useChar) {
-      let currentLine = 0;
-      let currentChart = 0;
-      let currentText = '';
-      const pageStart = useChar;
-      let remainingChars = pageTotalChar;
-
-      while (currentLine < totalLine && currentChart < pageTotalChar && useChar < total) {
-        const char = text[useChar];
-
-        if (char === '\n' || char === '\r') {
-          currentLine++;
-          currentChart = 0;
-          currentText += char;
-          useChar++;
-          remainingChars--;
-          continue;
-        }
-
-        // 检查当前字符是否是单词的一部分
-        const isWordPartChar = isWordPart(char);
-
-        // 如果当前行已满
-        if (currentChart >= charsPerLine) {
-          // 如果当前正在处理一个单词
-          if (isWordPartChar) {
-            // 找到当前单词的开始位置
-            const wordStart = findWordStart(useChar);
-            // 找到当前单词的结束位置
-            const wordEnd = findNextWordEnd(useChar);
-            // 如果单词太长，无法在当前行放下，将整个单词移到下一行
-            if (wordEnd - wordStart > charsPerLine) {
-              currentLine++;
-              currentChart = 0;
-              continue;
-            }
-          }
-          currentLine++;
-          currentChart = 0;
-          continue;
-        }
-
-        currentText += char;
-        useChar++;
-        if (isWordPart(char)) {
-          currentChart += 0.5625;
-        } else {
-          currentChart++;
-        }
-        remainingChars--;
-      }
-
-      // 检查是否在单词中间结束页面
-      if (useChar < total) {
-        const nextChar = text[useChar];
-        if (isWordPart(nextChar)) {
-          // 找到当前单词的开始位置
-          const wordStart = findWordStart(useChar);
-          // 找到当前单词的结束位置
-          const wordEnd = findNextWordEnd(useChar);
-          const wordLength = wordEnd - wordStart;
-
-          // 如果单词无法在当前页放下，将整个单词移到下一页
-          if (wordLength > remainingChars) {
-            // 回退到单词开始位置
-            currentText = currentText.slice(0, wordStart - pageStart);
-            useChar = wordStart;
-          }
-        }
-      }
-
-      const size = result.length;
-      result.push({
-        text: currentText,
-        start: pageStart,
-        end: useChar,
-        index: size,
-        total,
-        totalLine,
-        fontSize,
-        lineHeight,
-        letterSpacing,
-        charWidth,
-        charsPerLine,
-        pageTotalChar,
-      });
-    }
-
-    result.forEach((item, index) => {
-      if (index === 0) {
-        item.start = 0;
-      }
-      item.start = result[index - 1]?.end || 0;
-    });
-
-    return {
-      program: result,
-      total,
-      totalLine,
-      fontSize,
-      lineHeight,
-      letterSpacing,
-      charWidth,
-      charsPerLine,
-      pageTotalChar,
-    };
-  }
-  return {
-    program: [],
-    total,
-    totalLine: 0,
-    fontSize: 0,
-    lineHeight: 0,
-    letterSpacing: 0,
-    charWidth: 0,
-    charsPerLine: 0,
-    pageTotalChar: 0,
-  };
-};
+export const pagingText = (content: string, container: HTMLElement): PagingTextResult =>
+  pagingTextCore(content, { clientWidth: container?.clientWidth ?? 0, clientHeight: container?.clientHeight ?? 0 });
 
 export interface ChapterItem {
   title: string;
@@ -379,70 +186,12 @@ export const transformTextToExpectedFormat = ({
       extractedChapters = detectChapters(text);
     }
   }
-  // 3. 把文本按章节划分
-  const sections: Section[] = [];
-  extractedChapters.forEach((item, index) => {
-    const { start, end, title } = item;
-    if (index === 0 && start > 0) {
-      const section = text.slice(0, start);
-      sections.push({ title: t('preface'), section });
-    }
-    const section = text.slice(start, end);
-    sections.push({ title, section });
+  // 3~5. 切段 + 分页 + 建树：交给纯核心（与分页 Worker 同一份实现）。
+  return buildTextSyntaxTree({
+    text,
+    dims: { clientWidth: container?.clientWidth ?? 0, clientHeight: container?.clientHeight ?? 0 },
+    title,
+    chapters: extractedChapters,
+    prefaceLabel: t('preface'),
   });
-  if (extractedChapters.length === 0) {
-    sections.push({ title, section: text });
-  }
-  if (container?.clientWidth < 30 || container?.clientHeight < 30) {
-    return {
-      sequences: [],
-      totalPage: 0,
-      pageText: [],
-      pageTitleId: [],
-      titleIdTitle: [],
-      titleIdPage: {},
-    };
-  }
-  // 4. 把章节按页划分
-  const sequences: Sequence[] = [];
-  sections.forEach((item, index) => {
-    const { title, section } = item;
-    if (container) {
-      const result = pagingText(section.replace(CHAPTER_TITLE_START, '').replace(CHAPTER_TITLE_END, ''), container);
-      sequences.push({ title, result, titleId: index });
-    }
-  });
-
-  // 5. 输出文本语法树
-  let totalPage = 0;
-  // 通过空间换时间，构建 page -> text 的映射
-  const pageText: PagingTextItem[] = [];
-  // page -> titleId 的映射
-  const pageTitleId: number[] = [];
-  // titleId -> title 的映射
-  const titleIdTitle: string[] = [];
-  // titleId -> page 的映射
-  const titleIdPage: Record<string, number> = {};
-
-  sequences.forEach((item) => {
-    totalPage += item.result.program.length;
-    item.result.program.forEach((page) => {
-      // 必须与 undefined 比较：首章首页的页码是 0，用 falsy 判断会被当成未赋值而指向第 2 页
-      if (titleIdPage[item.titleId] === undefined) {
-        titleIdPage[item.titleId] = pageText.length;
-      }
-      pageTitleId.push(item.titleId);
-      pageText.push(page);
-    });
-    titleIdTitle.push(item.title);
-  });
-
-  return {
-    sequences,
-    totalPage,
-    pageText,
-    pageTitleId,
-    titleIdTitle,
-    titleIdPage,
-  };
 };

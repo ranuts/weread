@@ -245,7 +245,8 @@
 .wr-home-input {
   display: block;
   width: 100%;
-  height: 3.4rem;
+  /* 高度由 --ran-input-content-padding 的对称上下内边距决定（见 INPUT_CSS_VARS），
+     不强设 height——强设会让 r-input 内部行顶对齐、留白在下、文本骑高，和 "/" 芯片错位。 */
   --ran-input-active-outline: none;
   --ran-input-active-border-color: var(--ran-color-link);
   --ran-input-active-box-shadow:
@@ -799,6 +800,7 @@
 
 /* 阅读纸面 */
 .wr-reader-book {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -811,6 +813,17 @@
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.04),
     0 24px 48px -28px rgba(0, 0, 0, 0.32);
+}
+/* 分页加载遮罩：盖住纸面，中央转圈（Worker 计算大书语法树时）。 */
+.wr-reader-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ran-color-bg-elevated);
+  border-radius: inherit;
 }
 .wr-reader-chapter {
   font-size: 0.78rem;

@@ -9,6 +9,7 @@ import { canAutoEnhance } from '@/lib/nlp/modelCache';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
+import { paginateInWorker } from '@/lib/pagingClient';
 import { fromStore } from '@/lib/reactive';
 import {
   EVENT_NAME,
@@ -102,6 +103,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   const [enhancePhase, setEnhancePhase] = signal<'download' | 'detect'>('download');
   // 手动增强无改善时的短暂提示（避免「点了没反应像坏了」）
   const [enhanceNote, setEnhanceNote] = signal<string | null>(null);
+  // 分页进行中（Worker 计算大书语法树时）：显加载态，主线程不冻结
+  const [paging, setPaging] = signal(false);
 
   const containerRef = createRef<HTMLDivElement>(); // book-info morph 目标
   const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器
@@ -141,14 +144,12 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       });
       setCanEnhance(false);
       if (result?.improved && showContainerRef.current && contentRef.current) {
-        setTextSyntaxTree(
-          transformTextToExpectedFormat({
-            content: contentRef.current,
-            title: bookDetail().title ?? '',
-            container: showContainerRef.current,
-            chapters: result.record.chapters,
-          }),
-        );
+        paginateToTree({
+          content: contentRef.current,
+          title: bookDetail().title ?? '',
+          chapters: result.record.chapters,
+          encoding: bookDetail().encoding ?? 'utf-8',
+        });
         setPageNum(0);
         // 增强后目录变了，刷新编辑上下文的章节副本
         setChapterEditContext({
@@ -169,6 +170,37 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     }
   };
 
+  /**
+   * 分页构建语法树：优先走 Worker（大书不冻结主线程），Worker 不可用时回退主线程同步。
+   * 测量在主线程（读一次 clientW/H），重活在 Worker。
+   */
+  const paginateToTree = (opts: {
+    content: ArrayBuffer | Uint8Array<ArrayBuffer>;
+    title: string;
+    chapters: DetectedChapter[];
+    encoding: string;
+  }): void => {
+    const el = showContainerRef.current;
+    if (!el) return;
+    const { content, title, chapters, encoding } = opts;
+    setPaging(true);
+    const done = (tr: ReturnType<typeof transformTextToExpectedFormat>): void => {
+      setTextSyntaxTree(tr);
+      setPaging(false);
+    };
+    paginateInWorker({
+      content,
+      encoding: encoding || 'utf-8',
+      clientWidth: el.clientWidth,
+      clientHeight: el.clientHeight,
+      title,
+      chapters,
+      prefaceLabel: t('preface'),
+    })
+      .then(done)
+      .catch(() => done(transformTextToExpectedFormat({ content, title, container: el, chapters })));
+  };
+
   const loadBook = (bookId: string): void => {
     getBookById<BookInfo>(bookId)
       .then((res) => {
@@ -177,17 +209,10 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           return;
         }
         setCurrentBookDetail(res.data);
-        const { content, title } = res.data;
+        const { content, title, encoding } = res.data;
         // 章节优先走 IndexedDB 缓存，未命中则识别并写缓存
         resolveBookChapters(bookId, content).then((bookChapters) => {
-          setTextSyntaxTree(
-            transformTextToExpectedFormat({
-              content,
-              title,
-              container: showContainerRef.current!,
-              chapters: bookChapters.chapters,
-            }),
-          );
+          paginateToTree({ content, title, chapters: bookChapters.chapters, encoding });
           contentRef.current = content;
           ruleChaptersRef.current = bookChapters.chapters;
           setCanEnhance(canEnhanceWithModel(bookChapters));
@@ -299,6 +324,18 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               .ref(containerRef)
               .style('view-transition-name', id ? `book-info-${id}` : '')
               .children(
+                // 分页中（Worker 计算语法树）：纸面中央转圈，主线程保持可交互
+                Show({
+                  when: () => paging(),
+                  children: () =>
+                    Div()
+                      .class('wr-reader-loading')
+                      .children(
+                        View('r-loading')
+                          .attr('name', 'circle-fold')
+                          .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
+                      ),
+                }),
                 Div().class('wr-reader-chapter').text(chapterTitle),
                 Div()
                   .class('wr-reader-columns')
@@ -381,6 +418,17 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
         Div()
           .class('wr-reader-mobile-inner')
           .children(
+            Show({
+              when: () => paging(),
+              children: () =>
+                Div()
+                  .class('wr-reader-loading')
+                  .children(
+                    View('r-loading')
+                      .attr('name', 'circle-fold')
+                      .cssVar('--loading-circle-fold-item-before-background', 'var(--ran-color-primary)'),
+                  ),
+            }),
             Div()
               .class('wr-reader-chrome wr-reader-chrome-top')
               .style('height', barHeight)
