@@ -1,6 +1,6 @@
 {
   "exclude": ["node_modules/**", "dist/**", "public"],
-  "include": ["**/*.ts", "**/*.d.ts", "**/*.tsx", "tailwind.config.ts"],
+  "include": ["**/*.ts", "**/*.d.ts"],
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -17,7 +17,6 @@
     "useUnknownInCatchVariables": false,
     "inlineSourceMap": true,
     "experimentalDecorators": true,
-    "jsx": "react-jsx",
     "paths": {
       "@/*": ["./*"],
       "@/types/*": ["./types/*"],
