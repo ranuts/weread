@@ -1411,10 +1411,12 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  margin-bottom: 0.5rem;
+  /* 底部留出与顶栏相称的呼吸空间，避免卡片下缘贴住视口底（原 0.5rem≈8px 太贴边）。 */
+  margin-bottom: 1.75rem;
   /* 左右内边距随阅读设置「页边距」档位缩放（--wr-margin-scale：窄 0.5 / 标准 1 / 宽 1.6）。
-     容器 clientWidth 随之变化，分页核心读取后自动重算每行字数。 */
-  padding: 2.25rem calc(clamp(2rem, 5vw, 4.5rem) * var(--wr-margin-scale, 1)) 0.5rem;
+     容器 clientWidth 随之变化，分页核心读取后自动重算每行字数。上下内边距也放大一点，
+     让正文不贴卡片上下缘（底部 1.25rem 给正文与翻页栏之间留气口）。 */
+  padding: 2.25rem calc(clamp(2rem, 5vw, 4.5rem) * var(--wr-margin-scale, 1)) 1.25rem;
   background: var(--ran-color-bg-elevated);
   border: 1px solid var(--ran-color-border);
   border-radius: var(--ran-radius-lg, 16px);
