@@ -1,12 +1,12 @@
 import 'ranui/icon';
-import { Div, For, Show, Span, View } from 'ranui/builder';
+import { Div, Index, Show, Span, View } from 'ranui/builder';
 import { EVENT_NAME, getBookNotes, getTextSyntaxTree, setBookNotes, setPageNum, syncHook } from '@/lib/subscribe';
 import { fromStore } from '@/lib/reactive';
 import { buildPageOffsets, pageForOffset } from '@/lib/notes/anchor';
 import { deleteNote } from '@/store/notes';
 import { t } from '@/locales';
 import type { BookNote } from '@/store/notes';
-import type { ElementBuilder } from 'ranui/builder';
+import type { ElementBuilder, Getter } from 'ranui/builder';
 
 const EMPTY_ICON_FONT_SIZE = '60px';
 const DEL_ICON_FONT_SIZE = '16px';
@@ -40,22 +40,26 @@ export const renderNotesPanel = (): ElementBuilder => {
     void deleteNote(id).then(() => setBookNotes(notes().filter((n) => n.id !== id)));
   };
 
-  const buildItem = (note: BookNote): ElementBuilder =>
+  // 用 Index（按位置复用节点 + item 为 getter），字段绑定全走 getter：改颜色/想法后面板即时反映
+  // （For 按 key 复用会锁死首次快照，导致「先建划线后补想法」时想法不显示）。
+  const buildItem = (note: Getter<BookNote>): ElementBuilder =>
     Div()
       .class('wr-notes-item')
       .children(
         Div()
           .class('wr-notes-item-main')
-          .on('click', () => jump(note))
+          .on('click', () => jump(note()))
           .children(
-            Span().class(`wr-notes-quote wr-mark-${note.color}`).text(note.text),
+            Span()
+              .class(() => `wr-notes-quote wr-mark-${note().color}`)
+              .text(() => note().text),
             Show({
-              when: () => !!note.thought,
-              children: () => Div().class('wr-notes-thought').text(note.thought ?? ''),
+              when: () => !!note().thought,
+              children: () => Div().class('wr-notes-thought').text(() => note().thought ?? ''),
             }),
             Show({
-              when: () => !!note.chapterTitle,
-              children: () => Div().class('wr-notes-chapter').text(note.chapterTitle ?? ''),
+              when: () => !!note().chapterTitle,
+              children: () => Div().class('wr-notes-chapter').text(() => note().chapterTitle ?? ''),
             }),
           ),
         View('r-icon')
@@ -63,7 +67,7 @@ export const renderNotesPanel = (): ElementBuilder => {
           .attr('name', 'close')
           .attr('title', t('delete_note'))
           .cssVar('--ran-icon-font-size', DEL_ICON_FONT_SIZE)
-          .on('click', () => remove(note.id)),
+          .on('click', () => remove(note().id)),
       );
 
   return Div()
@@ -76,9 +80,8 @@ export const renderNotesPanel = (): ElementBuilder => {
           Div()
             .class('wr-notes-list')
             .children(
-              For({
+              Index({
                 each: () => notes(),
-                key: (n) => n.id,
                 render: (n) => buildItem(n),
               }),
             ),
