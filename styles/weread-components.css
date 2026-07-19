@@ -240,7 +240,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.7rem max(1.5rem, calc((100% - var(--wr-content-width)) / 2));
+  /* 顶部叠加设备安全区（viewport-fit=cover 后 sticky 头部会顶到刘海下）。 */
+  padding: calc(0.7rem + env(safe-area-inset-top)) max(1.5rem, calc((100% - var(--wr-content-width)) / 2)) 0.7rem;
   background: color-mix(in srgb, var(--ran-color-bg) 80%, transparent);
   backdrop-filter: saturate(180%) blur(12px);
   -webkit-backdrop-filter: saturate(180%) blur(12px);
@@ -423,7 +424,8 @@
 .wr-home-shelf {
   max-width: var(--wr-content-width);
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
+  /* 底部叠加设备安全区，最后一排书不被底部指示条压住。 */
+  padding: 2.5rem 1.5rem calc(4rem + env(safe-area-inset-bottom));
 }
 .wr-home-shelf-head {
   display: flex;

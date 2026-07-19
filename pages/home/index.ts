@@ -61,7 +61,8 @@ const addBookByFile = (): Promise<BookInfo> =>
       if (!file) return;
       createReader(file).then((result) => {
         addBook({ title: file.name, encoding: checkEncoding(new Uint8Array(result)), content: result }).then((res) => {
-          res.error ? reject(res.error) : resolve(res.data as BookInfo);
+          if (res.error) reject(res.error);
+          else resolve(res.data as BookInfo);
         });
       });
     };
@@ -81,7 +82,8 @@ const addBookByUrl = ({ url, title, image, author }: EnBook): Promise<BookInfo> 
             image,
             author,
           }).then((res) => {
-            res.error ? reject(res.error) : resolve(res.data as BookInfo);
+            if (res.error) reject(res.error);
+            else resolve(res.data as BookInfo);
           });
         });
       });
