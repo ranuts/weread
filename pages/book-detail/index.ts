@@ -165,7 +165,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       }
     } finally {
       enhancing = false;
-      setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
+      // 回到 available（常驻按钮），而非 idle——识别完仍可手动「重新生成目录」。runDetect 仅对有模型的书触发。
+      setChapterDetect({ status: 'available', phase: 'download', progress: 0 });
     }
   };
 
@@ -217,14 +218,13 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               chapters: bookChapters.chapters.map((c) => ({ ...c })),
             });
           }
-          // 章节自动分析：无缓存(pending) + 该语言有模型 → **停在书上 ~700ms 才自动跑**分析（用
-          // detectTimer，快进快出在 700ms 内离开就不触发，避免反复启停模型实例）；模型权重由 SW 预取
-          // 持久缓存、分析在 nlp worker 跑，不冻结 reader。已缓存直接用；旧规则/caption 缓存给手动「分析章节」升级入口。
-          if (bookChapters.source === 'pending' && hasModelForLang(bookChapters.lang)) {
+          // 目录里**常驻**手动按钮：只要该语言有模型（available），随时可点「重新生成目录」重跑，不管缓存来源。
+          const canDetect = hasModelForLang(bookChapters.lang);
+          setChapterDetect({ status: canDetect ? 'available' : 'idle', phase: 'download', progress: 0 });
+          // 无缓存(pending) + 有模型 → **停在书上 ~700ms 才自动跑**首次分析（detectTimer，快进快出 700ms 内离开
+          // 就不触发，避免反复启停模型实例）；模型权重由 SW 预取持久缓存、分析在 nlp worker 跑，不冻结 reader。
+          if (bookChapters.source === 'pending' && canDetect) {
             detectTimer = setTimeout(() => void runDetect(), 700);
-          } else {
-            const canUpgrade = bookChapters.source !== 'model' && hasModelForLang(bookChapters.lang);
-            setChapterDetect({ status: canUpgrade ? 'available' : 'idle', phase: 'download', progress: 0 });
           }
         });
       })
