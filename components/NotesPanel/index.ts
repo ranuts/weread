@@ -55,11 +55,17 @@ export const renderNotesPanel = (): ElementBuilder => {
               .text(() => note().text),
             Show({
               when: () => !!note().thought,
-              children: () => Div().class('wr-notes-thought').text(() => note().thought ?? ''),
+              children: () =>
+                Div()
+                  .class('wr-notes-thought')
+                  .text(() => note().thought ?? ''),
             }),
             Show({
               when: () => !!note().chapterTitle,
-              children: () => Div().class('wr-notes-chapter').text(() => note().chapterTitle ?? ''),
+              children: () =>
+                Div()
+                  .class('wr-notes-chapter')
+                  .text(() => note().chapterTitle ?? ''),
             }),
           ),
         View('r-icon')

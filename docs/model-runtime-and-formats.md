@@ -59,18 +59,18 @@ onnxruntime-web  ←── 这才是真正的 WASM：执行模型的「引擎」
 
 ### 2.1 主流格式一览
 
-| 格式 | 生态 | 含计算图 | 典型用途 | 浏览器可跑 |
-|---|---|---|---|---|
-| **safetensors** | Hugging Face | ❌ 仅权重 | 训练/分享权重，取代不安全的 pickle `.pt` | ❌（需模型代码） |
-| `.pt`/`.pth` | PyTorch | 部分 | 训练 checkpoint（pickle，能执行任意代码，有安全风险） | ❌ |
-| **ONNX** `.onnx` | 跨框架标准 | ✅ | 跨平台/边缘/**浏览器**推理，量化友好 | ✅ onnxruntime-web |
-| `.ort` | ONNX Runtime | ✅ | ONNX 的移动端优化二进制（加载更快，体积基本不变） | ✅ |
-| **GGUF** | llama.cpp / Ollama | ✅ | **本地跑 LLM**（CPU/Metal/CUDA），激进量化 Q4_K_M 等 | 少数 wasm 移植，非主流 |
-| **TFLite** `.tflite` | Google | ✅ | Android/移动端 | 有 TF.js，但另一套 |
-| **CoreML** `.mlpackage` | Apple | ✅ | iOS/Mac 神经引擎 | ❌ |
-| **TensorRT** `.engine` | NVIDIA | ✅ | 特定 N 卡上的极致性能（编译后不可移植） | ❌ |
-| OpenVINO IR | Intel | ✅ | Intel 硬件 | ❌ |
-| MLC/WebLLM 权重 | Apache TVM | ✅ | 浏览器里跑 LLM（编译 WebGPU shader + 自有权重格式） | ✅（专为此） |
+| 格式                    | 生态               | 含计算图  | 典型用途                                              | 浏览器可跑             |
+| ----------------------- | ------------------ | --------- | ----------------------------------------------------- | ---------------------- |
+| **safetensors**         | Hugging Face       | ❌ 仅权重 | 训练/分享权重，取代不安全的 pickle `.pt`              | ❌（需模型代码）       |
+| `.pt`/`.pth`            | PyTorch            | 部分      | 训练 checkpoint（pickle，能执行任意代码，有安全风险） | ❌                     |
+| **ONNX** `.onnx`        | 跨框架标准         | ✅        | 跨平台/边缘/**浏览器**推理，量化友好                  | ✅ onnxruntime-web     |
+| `.ort`                  | ONNX Runtime       | ✅        | ONNX 的移动端优化二进制（加载更快，体积基本不变）     | ✅                     |
+| **GGUF**                | llama.cpp / Ollama | ✅        | **本地跑 LLM**（CPU/Metal/CUDA），激进量化 Q4_K_M 等  | 少数 wasm 移植，非主流 |
+| **TFLite** `.tflite`    | Google             | ✅        | Android/移动端                                        | 有 TF.js，但另一套     |
+| **CoreML** `.mlpackage` | Apple              | ✅        | iOS/Mac 神经引擎                                      | ❌                     |
+| **TensorRT** `.engine`  | NVIDIA             | ✅        | 特定 N 卡上的极致性能（编译后不可移植）               | ❌                     |
+| OpenVINO IR             | Intel              | ✅        | Intel 硬件                                            | ❌                     |
+| MLC/WebLLM 权重         | Apache TVM         | ✅        | 浏览器里跑 LLM（编译 WebGPU shader + 自有权重格式）   | ✅（专为此）           |
 
 ### 2.2「哪个最好」——没有通用最优，只有分场景最优
 

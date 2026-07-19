@@ -18,9 +18,7 @@ import type { ElementBuilder, Getter } from 'ranui/builder';
 
 /** 一行「标签 + 控件」布局。 */
 const settingRow = (label: string, control: ElementBuilder): ElementBuilder =>
-  Div()
-    .class('wr-settings-row')
-    .children(Span().class('wr-settings-label').text(label), control);
+  Div().class('wr-settings-row').children(Span().class('wr-settings-label').text(label), control);
 
 /**
  * 步进控件（字号 / 行距）：− 值 +，到边界禁用。value 是响应式 getter，
@@ -43,7 +41,9 @@ const stepper = (opts: {
         .attr('aria-label', 'decrease')
         .text('−')
         .on('click', () => opts.value() > opts.min && opts.onDec()),
-      Span().class('wr-settings-value').text(() => opts.format(opts.value())),
+      Span()
+        .class('wr-settings-value')
+        .text(() => opts.format(opts.value())),
       View('button')
         .class(() => `wr-settings-step ${opts.value() >= opts.max ? 'is-disabled' : ''}`)
         .attr('type', 'button')

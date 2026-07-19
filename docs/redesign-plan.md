@@ -11,22 +11,22 @@
 
 ## 一、进度总览
 
-| 模块 | 状态 | 说明 |
-|---|---|---|
-| 封面系统重设计 | ✅ 已交付 | 随机满饱和 HSL 渐变 → 8 色精选编辑感双色板 + 衬线标题 + 内描边书框；亮暗验证 |
-| 阅读正文衬线 | ✅ 已交付 | `--wr-serif`（Latin+CJK）用于双列/移动正文，CJK 落 Songti，"印刷书"质感 |
-| 书架入场动效 | ✅ 已交付 | CSS-only fade-up 错峰，`prefers-reduced-motion` 兜底 |
-| 边打边搜（首页 + 书内） | ✅ 已交付 | `change`→`input`，250ms 防抖；实测无回车即出结果 |
-| Esc 清空搜索 | ✅ 已交付 | 清输入 + 复位搜索态，露出书架 |
-| 阅读键盘翻页 | ✅ 已交付 | ←/→、Space、PageUp/Down（Shift+Space 回退），输入聚焦时不拦截，onCleanup 解绑 |
-| 桌面阅读位置指示 | ✅ 已交付 | `当前页 / 总页`，tabular-nums，与移动端对齐 |
-| **r-input focus 能力** | ✅ 已交付（ranui 源码） | 组件补 `focus()`/`blur()`/`select()`，见 §四 |
-| **`/` 聚焦搜索 + 全选** | ✅ 已交付 | 依赖上条；本地已 patch 验证通过，正式生效需 ranui 发版 + 升级（见 §四） |
-| **Vercel 质感深修** | 🚧 进行中 | 见 §二 |
-| 目录高亮当前章节 | ✅ 已交付 | 当前章左侧墨色竖条 + 提亮，浮层打开/翻页自动滚入视口（IntersectionObserver）；见 §三 -1 |
-| 搜索结果键盘导航 | ✅ 已交付 | 首页 + 书内搜索均支持 ↑/↓ 移高亮、Enter 打开/跳页；见 §三 -2 |
-| 大书分页性能 | ✅ 已交付 | 分页算法 5× 提速（910K 字 17ms）+ 撤掉挂起的分页 Worker，大书秒开；见 §三 -3 |
-| 章节识别改纯模型无感 | ✅ 已交付 | 弃规则、纯模型 + 页面加载预取 + 目录 loading + SW 缓存；见 §三 -4 / journey §12 |
+| 模块                    | 状态                    | 说明                                                                                    |
+| ----------------------- | ----------------------- | --------------------------------------------------------------------------------------- |
+| 封面系统重设计          | ✅ 已交付               | 随机满饱和 HSL 渐变 → 8 色精选编辑感双色板 + 衬线标题 + 内描边书框；亮暗验证            |
+| 阅读正文衬线            | ✅ 已交付               | `--wr-serif`（Latin+CJK）用于双列/移动正文，CJK 落 Songti，"印刷书"质感                 |
+| 书架入场动效            | ✅ 已交付               | CSS-only fade-up 错峰，`prefers-reduced-motion` 兜底                                    |
+| 边打边搜（首页 + 书内） | ✅ 已交付               | `change`→`input`，250ms 防抖；实测无回车即出结果                                        |
+| Esc 清空搜索            | ✅ 已交付               | 清输入 + 复位搜索态，露出书架                                                           |
+| 阅读键盘翻页            | ✅ 已交付               | ←/→、Space、PageUp/Down（Shift+Space 回退），输入聚焦时不拦截，onCleanup 解绑           |
+| 桌面阅读位置指示        | ✅ 已交付               | `当前页 / 总页`，tabular-nums，与移动端对齐                                             |
+| **r-input focus 能力**  | ✅ 已交付（ranui 源码） | 组件补 `focus()`/`blur()`/`select()`，见 §四                                            |
+| **`/` 聚焦搜索 + 全选** | ✅ 已交付               | 依赖上条；本地已 patch 验证通过，正式生效需 ranui 发版 + 升级（见 §四）                 |
+| **Vercel 质感深修**     | 🚧 进行中               | 见 §二                                                                                  |
+| 目录高亮当前章节        | ✅ 已交付               | 当前章左侧墨色竖条 + 提亮，浮层打开/翻页自动滚入视口（IntersectionObserver）；见 §三 -1 |
+| 搜索结果键盘导航        | ✅ 已交付               | 首页 + 书内搜索均支持 ↑/↓ 移高亮、Enter 打开/跳页；见 §三 -2                            |
+| 大书分页性能            | ✅ 已交付               | 分页算法 5× 提速（910K 字 17ms）+ 撤掉挂起的分页 Worker，大书秒开；见 §三 -3            |
+| 章节识别改纯模型无感    | ✅ 已交付               | 弃规则、纯模型 + 页面加载预取 + 目录 loading + SW 缓存；见 §三 -4 / journey §12         |
 
 ---
 
@@ -48,21 +48,25 @@
 ## 三、后续路线（已排期，未开工）
 
 ### 1. 目录高亮当前章节
+
 - **痛点**：目录（Catalogue）里看不出"我读到哪一章"。
 - **方案**：`renderCatalogue` 订阅 `pageNum`/`tree`，按 `pageTitleId[pageNum]` 求当前章节 index，给对应 `.wr-catalogue-item` 加 `.is-active`（左侧 `--ran-color-primary` 竖条 + 主文本色 + `bg-hover` 底）。打开目录时 `scrollIntoView` 到当前章。
 - **验证**：翻到中段开目录，当前章高亮且在视口内。
 
 ### 2. 搜索结果键盘导航
+
 - **痛点**：边打边搜后只能鼠标点结果。
 - **方案**：首页搜索面板加 roving `↑/↓` 选中（`aria-activedescendant` + `.is-highlighted`），`Enter` 打开高亮项、无高亮时打开第一条，`Esc` 已接管清空。书内搜索同理跳页。
 - **注意**：与全局 `onKey` 协作——输入聚焦时 `↑↓/Enter` 归搜索面板，不触发翻页。
 
 ### 3. 大书分页性能（✅ 已交付，结论与初判不同）
+
 - **真因**：以为是分页卡主线程，实测后发现分页根本不慢——真凶是「分页 Worker 挂起」（首版 worker 不 postMessage 回来、无超时兜底 → loading 永挂）+ **模型自动增强**（英文书 `confidence:none` 触发下 67MB 模型）。分页算法本身：优化后**910K 字 → 17ms**（《三国》1916 页 / Walden 1443 页 **秒开**）。
 - **做法**：① 分页算法优化——`charCode` 查表替每字符正则、`text.slice` 一次切页替逐字符 `+=` 拼串，**约 5×**（90ms→17ms），纯核心 `lib/paging.ts`（`pagingTextCore` / `buildTextSyntaxTree`），语法树 3/3 测试逐字节不变。② **撤掉分页 Worker**（over-engineering + 有挂起 bug；17ms 单帧同步即可，无冻结、无 loading）。③ 章节识别改纯模型异步（见下），reader 立即可读、目录显 loading。
 - **验证**：《三国》1916 页、Walden 1443 页均秒开，主线程全程可交互（截图/求值不再超时）。
 
 ### 4. 章节识别改「纯模型 + 无感自动」（✅ 已交付，见 chapter-detection-journey §12）
+
 - **要求**：弃规则匹配（打地鼠、54% 覆盖，见 journey §3）；只用模型，且对用户无感——页面加载即后台预取模型 + SW 缓存，没好就目录显 loading。
 - **做法**：`detectChaptersWithModel` 去 union+validate（逐行过阈值直接成章）；`resolveBookChapters` 缓存/caption/pending 三态、不跑规则；reader model-first（pending → 模型识别，整本一章可读 + 目录 loading）；打开页面即 `prefetchModelsForLangs([uiLang()])`；**任何已缓存结果直接复用**（不迁移丢弃——否则结构化大书会强下 103MB 重跑、卡顿），纯模型只作用于无缓存新书。**权衡**：去 validate 后模型假阳性直进目录（用户接受，靠 per-lang 模型精度 + 手动编辑兜底）。
 - **验证**：清缓存开 Walden → 整本一章立即可读 → 目录「Detecting」→ 模型出「1854/WALDEN/ECONOMY/SOLITUDE」、reader 重排、当前章高亮、缓存 model 重开不跑。
