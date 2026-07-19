@@ -52,20 +52,26 @@ const stepper = (opts: {
         .on('click', () => opts.value() < opts.max && opts.onInc()),
     );
 
-/** 分段选择器：一排选项，选中项加 is-active。 */
+/**
+ * 分段选择器：一排选项，选中项加 is-active。`group` 落到 data-group、每项 key 落到 data-key，
+ * 供 CSS 做视觉分化（主题项显色点预览、字体项用各自字体族显示标签）。
+ */
 const segmented = <T extends string>(opts: {
   value: Getter<T>;
   options: { key: T; label: string }[];
   onSelect: (key: T) => void;
+  group?: string;
 }): ElementBuilder =>
   Div()
     .class('wr-settings-segmented')
+    .attr('data-group', opts.group ?? '')
     .children(
       ...opts.options.map((o) =>
         View('button')
           .class(() => `wr-settings-seg ${opts.value() === o.key ? 'is-active' : ''}`)
           .attr('type', 'button')
-          .text(o.label)
+          .attr('data-key', o.key)
+          .children(Span().class('wr-settings-seg-dot'), Span().class('wr-settings-seg-label').text(o.label))
           .on('click', () => opts.onSelect(o.key)),
       ),
     );
@@ -125,6 +131,7 @@ export const renderReadingSettings = (): ElementBuilder => {
           value: () => s().margin,
           options: marginOptions,
           onSelect: (margin) => updateReadingSettings({ margin }),
+          group: 'margin',
         }),
       ),
       settingRow(
@@ -133,6 +140,7 @@ export const renderReadingSettings = (): ElementBuilder => {
           value: () => s().theme,
           options: themeOptions,
           onSelect: (theme) => updateReadingSettings({ theme }),
+          group: 'theme',
         }),
       ),
       settingRow(
@@ -141,6 +149,7 @@ export const renderReadingSettings = (): ElementBuilder => {
           value: () => s().font,
           options: fontOptions,
           onSelect: (font) => updateReadingSettings({ font }),
+          group: 'font',
         }),
       ),
       View('button')

@@ -2,7 +2,7 @@ import 'ranui/input';
 import 'ranui/icon';
 import 'ranui/loading';
 import 'ranui/theme-switch';
-import 'ranui/modal'; // 注册 r-modal + 载入 Modal 运行时（其 ./modal 子路径 types 映射有 bug，见下方本地类型）
+import { Modal } from 'ranui/modal';
 import { debounce } from 'ranuts/utils';
 import { Div, For, Match, Show, Span, Switch, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import {
@@ -25,17 +25,6 @@ import { t } from '@/locales';
 import type { Child, ElementBuilder } from 'ranui/builder';
 import type { BookInfo, SearchResult } from '@/store/books';
 import type { EnBook } from '@/lib/ensample';
-
-/** ranui Modal 编程式确认框的静态方法（ranui 0.3.1-alpha.1 的 ./modal 子路径 types 映射到了 index.d.ts，
- *  取不到 Modal/confirm，故本地声明；从 `customElements.get('r-modal')` 拿构造器调用）。 */
-interface RanModalStatic {
-  confirm(options: {
-    title?: string;
-    content?: string | Node;
-    okText?: string;
-    cancelText?: string;
-  }): Promise<{ action: 'confirm' | 'cancel' | 'dismiss' }>;
-}
 
 export interface PageOptions {
   /** 服务端渲染时只出外壳（不碰 window/DB），数据在 client 从 IndexedDB 加载 */
@@ -180,8 +169,6 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   /** 删除书：modal 二次确认（不可撤销）→ 删书本体 + 章节缓存 → 从书架移除。 */
   const removeBook = async (bookId: string): Promise<void> => {
     const book = bookList().find((b) => b.id === bookId);
-    const Modal = customElements.get('r-modal') as unknown as RanModalStatic | undefined;
-    if (!Modal) return; // 理论上 import 已注册；防御一下
     const { action } = await Modal.confirm({
       title: t('delete_book_title'),
       content: t('delete_book_confirm', [book?.title ?? '']),
