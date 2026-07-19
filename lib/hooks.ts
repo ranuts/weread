@@ -1,35 +1,29 @@
-import { useEffect, useState } from 'react';
-
 export enum DEVICE_ENUM {
   UNKNOWN = 'unknown',
   MOBILE = 'mobile',
   DESKTOP = 'desktop',
 }
-// 检测当前设备
-export const useCheckDevice = (): [DEVICE_ENUM] => {
-  const [currentDevice, setCurrentDevice] = useState<DEVICE_ENUM>(DEVICE_ENUM.UNKNOWN);
-  const checkDevice = () => {
-    // 使用 matchMedia 检查是否是移动设备
-    const isMobileDevice = window.matchMedia('(max-width: 768px)').matches;
-    if (isMobileDevice) {
-      setCurrentDevice(DEVICE_ENUM.MOBILE);
-    }
-    const isDesktopDevice = window.matchMedia('(min-width: 768px)').matches;
-    if (isDesktopDevice) {
-      setCurrentDevice(DEVICE_ENUM.DESKTOP);
-    }
-  };
 
-  useEffect(() => {
-    // 初始检查
-    checkDevice();
-    // 监听窗口大小变化
-    window.addEventListener('resize', checkDevice);
-    // 清理监听器
-    return () => {
-      window.removeEventListener('resize', checkDevice);
-    };
-  }, []);
+const MOBILE_QUERY = '(max-width: 768px)';
 
-  return [currentDevice];
+/** 同步读取当前设备（SSR 环境返回 UNKNOWN）。 */
+export const getDevice = (): DEVICE_ENUM => {
+  if (typeof window === 'undefined') return DEVICE_ENUM.UNKNOWN;
+  return window.matchMedia(MOBILE_QUERY).matches ? DEVICE_ENUM.MOBILE : DEVICE_ENUM.DESKTOP;
+};
+
+/**
+ * 监听设备变化（替代原 React `useCheckDevice`）。返回取消订阅函数，
+ * 在页面 `createRoot` 里配合 `onCleanup` 使用。回调会先同步触发一次当前值。
+ */
+export const watchDevice = (cb: (device: DEVICE_ENUM) => void): (() => void) => {
+  if (typeof window === 'undefined') {
+    cb(DEVICE_ENUM.UNKNOWN);
+    return () => {};
+  }
+  const mql = window.matchMedia(MOBILE_QUERY);
+  const handler = (): void => cb(mql.matches ? DEVICE_ENUM.MOBILE : DEVICE_ENUM.DESKTOP);
+  handler();
+  mql.addEventListener('change', handler);
+  return () => mql.removeEventListener('change', handler);
 };

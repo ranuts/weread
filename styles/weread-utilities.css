@@ -1,0 +1,29 @@
+/* 少量重复使用的原子类，替代原 Tailwind 工具类。基于 ranui token。 */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.full {
+  width: 100%;
+  height: 100%;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transition-all {
+  transition: all var(--ran-motion-duration-base, 0.2s);
+}
+
+.hover-scale {
+  transition: transform var(--ran-motion-duration-base, 0.2s);
+}
+
+.hover-scale:hover {
+  transform: scale(1.1);
+}

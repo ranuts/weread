@@ -1,9 +1,24 @@
-@import 'tailwindcss';
-@import './theme.scss';
+@import 'ranui/style'; /* Geist tokens (--ran-color-*, --ran-space-*, --ran-radius-*) + 组件 CSS */
+@import 'ranui/fonts'; /* Geist Sans / Mono */
+@import './theme.scss'; /* 旧语义变量 → --ran-* 重映射 */
+@import './weread-utilities.css'; /* 少量原子类 */
+@import './weread-components.css'; /* Phase 2 叶子组件样式 */
 
 html,
 body {
   height: 100%;
+}
+
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ran-color-bg);
+  color: var(--ran-color-text);
+  font-family: var(--ran-font-family);
+  font-size: var(--ran-font-size, 14px);
 }
 
 a {
