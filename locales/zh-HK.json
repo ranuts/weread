@@ -39,5 +39,22 @@
   "edit_catalogue": "編輯目錄",
   "delete_chapter": "刪除章節",
   "delete_book": "刪除",
-  "delete_book_confirm": "刪除《{{0}}》？此操作無法復原。"
+  "delete_book_title": "刪除書籍",
+  "delete_book_confirm": "刪除《{{0}}》？此操作無法復原。",
+  "cancel": "取消",
+  "reading_settings": "閱讀設定",
+  "font_size": "字號",
+  "line_spacing": "行距",
+  "margin": "頁邊距",
+  "reading_theme": "主題",
+  "body_font": "字體",
+  "margin_narrow": "窄",
+  "margin_normal": "標準",
+  "margin_wide": "寬",
+  "theme_system": "跟隨",
+  "theme_sepia": "護眼",
+  "theme_oled": "純黑",
+  "font_serif": "襯線",
+  "font_sans": "黑體",
+  "reset_settings": "恢復預設"
 }

@@ -39,5 +39,22 @@
   "edit_catalogue": "编辑目录",
   "delete_chapter": "删除章节",
   "delete_book": "删除",
-  "delete_book_confirm": "删除《{{0}}》？此操作不可撤销。"
+  "delete_book_title": "删除书籍",
+  "delete_book_confirm": "删除《{{0}}》？此操作不可撤销。",
+  "cancel": "取消",
+  "reading_settings": "阅读设置",
+  "font_size": "字号",
+  "line_spacing": "行距",
+  "margin": "页边距",
+  "reading_theme": "主题",
+  "body_font": "字体",
+  "margin_narrow": "窄",
+  "margin_normal": "标准",
+  "margin_wide": "宽",
+  "theme_system": "跟随",
+  "theme_sepia": "护眼",
+  "theme_oled": "纯黑",
+  "font_serif": "衬线",
+  "font_sans": "黑体",
+  "reset_settings": "恢复默认"
 }

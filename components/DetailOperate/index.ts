@@ -1,7 +1,8 @@
 import 'ranui/icon';
-import { Div, View } from 'ranui/builder';
+import { Div, Span, View } from 'ranui/builder';
 import { renderPopover } from '@/components/Popover';
 import { renderBookDetailMenu } from '@/components/DetailMenu';
+import { renderReadingSettings } from '@/components/ReadingSettings';
 import type { ElementBuilder } from 'ranui/builder';
 
 const MENU_ICON_FONT_SIZE = '24px';
@@ -12,18 +13,26 @@ const menuTrigger = (): ElementBuilder =>
     .class('wr-operate-trigger')
     .children(View('r-icon').class('hover-icon').attr('name', 'menu').cssVar('--ran-icon-font-size', MENU_ICON_FONT_SIZE));
 
-/** 桌面端：右上角浮动菜单按钮，点击左向弹出书内菜单。 */
+/** 阅读设置触发器（圆形按钮 + 「Aa」字样，Kindle 式排版入口）。 */
+const settingsTrigger = (): ElementBuilder =>
+  Div()
+    .class('wr-operate-trigger')
+    .children(Span().class('wr-operate-aa').text('Aa'));
+
+/** 桌面端：右上角浮动操作簇（排版设置 + 书内菜单），点击左向弹出对应浮层。 */
 export const renderBookDetailOperate = (): ElementBuilder =>
   Div()
     .class('wr-operate')
     .children(
+      renderPopover({ placement: 'left', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
       renderPopover({ placement: 'left', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
     );
 
-/** 移动端：底部 chrome 栏内的菜单按钮，点击向上弹出书内菜单。 */
+/** 移动端：底部 chrome 栏内的操作簇（排版设置 + 书内菜单），点击向上弹出对应浮层。 */
 export const renderMobileBookDetailOperate = (): ElementBuilder =>
   Div()
     .class('wr-operate-mobile')
     .children(
+      renderPopover({ placement: 'top', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
       renderPopover({ placement: 'top', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
     );

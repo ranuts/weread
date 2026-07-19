@@ -10,7 +10,7 @@
 | # | 功能 | 优先级 | 状态 | 一句话 |
 |---|---|---|---|---|
 | 1 | **阅读进度持久化 + 续读** | P0 | ✅ 已交付 | 按 book id 存进度到 `books_progress`(DB v3)，开书续读；书架封面底部蓝色进度条 |
-| 2 | 阅读设置（字号/行距/边距/阅读主题/正文字体） | P0 | ⬜ | 读者停留最久处，现在完全不可调 |
+| 2 | 阅读设置（字号/行距/边距/阅读主题/正文字体） | P0 | ✅ 已交付 | 「Aa」浮层调字号/行距/边距/主题/字体，即时重排并保位置 |
 | 3 | 书签 / 划线 / 笔记 | P0 | ⬜ | 选中划线 + 想法 + 笔记面板 |
 | 4 | 元数据编辑 + 封面上传 | P1 | ⬜ | 改书名/作者、传自定义封面 |
 | 5 | 阅读状态 / 标签 / 排序 / 分组 | P1 | ⬜ | 在读/读完/未读、最近置顶、书单 |
@@ -27,8 +27,12 @@
 - **实现**：新建轻量 store `books_progress`（DB v2→v3；单独 store 避免翻页重写 `books_info` 的整本 content 大 blob），存 `{ id, page, totalPage, percent, updatedAt }`（`store/progress.ts`）。reader：`paginateToTree` 出树后 `getProgress` 恢复上次页码（`restorePage` 同分页精确、异分页按比例缩放 + 夹取）；`createEffect` 订阅 `pageNum`/`totalPage`、防抖 700ms `saveProgress`（`progressRestored` 门控，避免初始 0 覆盖）。书架：`getAllProgress` 一次性拉、`renderBookCard` 传响应式 `getPercent` getter → 封面底部蓝色进度条（`.wr-cover-progress`）。删书级联清进度（`deleteBook`）。
 - **已验证**：《三国》翻到第 6 页离开重进 → 回到第 7/1916 页；书架《三国》封面显 45% 蓝条，未读书无条。
 
-### 2. 阅读设置（P0）
-- 字号 / 行距 / 边距 / 阅读主题（护眼 sepia、纯黑 OLED）/ 正文字体（衬线 ↔ 无衬线，现固定 `--wr-serif`）。设置存 localStorage，`--wr-*` / `--ran-*` 变量驱动，翻页/分页参数（`pagingTextCore` 的 fontSize/lineHeight）要随之联动重排。
+### 2. 阅读设置（P0，✅ 已交付）
+- **实现**：新 store `store/settings.ts`（localStorage + ranuts 响应式信号 `SET_READING_SETTINGS`），字段 `{ fontScale, lineScale, margin, theme, font }`（字号/行距倍率、页边距档、阅读主题、正文字体）。
+- **分页/显示同步（关键）**：`pagingTextCore` 加 `typography{fontScale,lineScale}` 参数，基准常量 × 倍率——**scale=1 与原硬编码逐位相同（零回归，46 测试含 9 条新用例守护）**；显示侧 `.wr-reader-columns`/`.wr-reader-mobile-text` 用 `calc(… × var(--wr-font-scale/--wr-line-scale))` 同倍率驱动，两侧一致不错位。透传链 `transformTextToExpectedFormat → buildTextSyntaxTree → pagingTextCore`。
+- **边距**：`--wr-margin-scale`（窄 0.5/标准 1/宽 1.6）缩放 `.wr-reader-book` 左右内边距 → 容器 clientWidth 变 → 分页自动重算每行字数。
+- **主题**：`.wr-theme-sepia`/`.wr-theme-oled` 局部覆盖 ran 语义色 token（阅读页根 class，'system' 跟随应用亮/暗）。**字体**：`--wr-body-font` 切 `--wr-serif`/`--wr-sans`（新增无衬线栈）。
+- **UX**：桌面右上 / 移动底栏加「Aa」浮层（`components/ReadingSettings` + `DetailOperate`）——字号/行距步进、边距/主题/字体分段选择、恢复默认。改设置 → 落 CSS + 按同章节 + 新倍率重排 + **按百分比映射保住阅读位置**（`onSettingsChange`）。首帧即按已存设置渲染。
 
 ### 3. 书签 / 划线 / 笔记（P0）
 - 选中正文 → 划线/高亮，附想法；单独「笔记」面板按书聚合。存 `books_notes` store，锚点用字符偏移（`pageText[i].start/end`）。

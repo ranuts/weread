@@ -2,20 +2,32 @@ import 'ranui/icon';
 import 'ranui/progress';
 import 'ranui/loading';
 import { debounce, getQuery } from 'ranuts/utils';
-import { Div, Span, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
+import { Div, Index, Show, Span, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import { getBookById } from '@/store/books';
 import { detectChaptersByModel, hasModelForLang, resolveBookChapters } from '@/store/chapters';
 import { prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { getProgress, restorePage, saveProgress } from '@/store/progress';
+import { getReadingSettings, settingsToCssVars, settingsToTypography, themeClass } from '@/store/settings';
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  HIGHLIGHT_COLORS,
+  deleteNote,
+  getNotesByBook,
+  makeNoteId,
+  saveNote,
+} from '@/store/notes';
+import { buildPageOffsets, pageForOffset, segmentPage } from '@/lib/notes/anchor';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
 import { fromStore } from '@/lib/reactive';
 import {
   EVENT_NAME,
+  getBookNotes,
   getCurrentBookDetail,
   getPageNum,
   getTextSyntaxTree,
+  setBookNotes,
   setChapterDetect,
   setCurrentBookDetail,
   setPageNum,
@@ -27,10 +39,11 @@ import { DEVICE_ENUM, getDevice } from '@/lib/hooks';
 import { renderBookDetailOperate, renderMobileBookDetailOperate } from '@/components/DetailOperate';
 import { ROUTE_PATH } from '@/router';
 import { t } from '@/locales';
-import type { ElementBuilder } from 'ranui/builder';
+import type { Child, ElementBuilder } from 'ranui/builder';
 import type { PageOptions } from '@/pages/home';
 import type { BookInfo } from '@/store/books';
 import type { DetectedChapter } from '@/lib/chapter';
+import type { BookNote, HighlightColor } from '@/store/notes';
 
 const ICON_FONT_SIZE = '14px';
 const MOBILE_ICON_FONT_SIZE = '36px';
@@ -109,15 +122,164 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     if (id) void saveProgress(id, pageNum(), tree().totalPage);
   }, 700);
 
+  const rootRef = createRef<HTMLDivElement>(); // 阅读页根（承载阅读设置的 CSS 变量 + 主题 class）
   const containerRef = createRef<HTMLDivElement>(); // book-info morph 目标
-  const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器
+  const showContainerRef = createRef<HTMLDivElement>(); // 分页测量容器（桌面左列 / 移动正文）
+  const colTwoRef = createRef<HTMLDivElement>(); // 桌面右列（划线选区计算）
   const contentRef: { current: ArrayBuffer | Uint8Array<ArrayBuffer> | null } = { current: null };
+  let lastChapters: DetectedChapter[] = []; // 最近一次分页用的章节（阅读设置改变时按同章节重排）
 
   /** 当前页的章节标题。 */
   const chapterTitle = (): string => {
     const tr = tree();
     return tr.titleIdTitle[tr.pageTitleId[pageNum()]] ?? '';
   };
+
+  // ── 划线/笔记 ──────────────────────────────────────────────────────────────
+  const notes = fromStore(getBookNotes, EVENT_NAME.SET_BOOK_NOTES);
+  // 每页在「可见文本」坐标系的全局起始偏移，按 tree 引用记忆（tree 不变则不重算，大书省 O(n)）。
+  let offsetsCache: { tree: unknown; offsets: number[] } | null = null;
+  const pageOffsets = (): number[] => {
+    const tr = tree();
+    if (offsetsCache?.tree !== tr) offsetsCache = { tree: tr, offsets: buildPageOffsets(tr.pageText) };
+    return offsetsCache.offsets;
+  };
+  /** 把某页文本按落在其中的划线切成「普通/高亮」段。 */
+  const pageSegments = (pageIndex: number) => {
+    const pt = tree().pageText[pageIndex];
+    if (!pt) return [];
+    return segmentPage(pt.text, pageOffsets()[pageIndex] ?? 0, notes());
+  };
+
+  // 划线操作浮层：create=刚选中未存（选颜色才落库）；edit=点已有高亮（改色/写想法/删）。
+  const [tb, setTb] = signal<{ x: number; y: number; mode: 'create' | 'edit'; note: BookNote } | null>(null);
+
+  const loadNotes = (bookId: string): void => {
+    getNotesByBook(bookId).then((list) => setBookNotes(list));
+  };
+
+  /** 从当前选区算出可见文本全局偏移 + 位置，弹出 create 浮层（选颜色才真正落库）。 */
+  const onSelectEnd = (colEl: HTMLElement, pageIndex: number): void => {
+    if (!id) return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!colEl.contains(range.startContainer) || !colEl.contains(range.endContainer)) return;
+    const selText = range.toString();
+    if (!selText.trim()) return;
+    // 选区起点前的可见文本长度 = 页内相对起始（UTF-16 码元，与分页/slice 一致）。
+    const pre = range.cloneRange();
+    pre.selectNodeContents(colEl);
+    pre.setEnd(range.startContainer, range.startOffset);
+    const start = (pageOffsets()[pageIndex] ?? 0) + pre.toString().length;
+    const rect = range.getBoundingClientRect();
+    const now = Date.now();
+    const draft: BookNote = {
+      id: makeNoteId(id, start, now),
+      bookId: id,
+      start,
+      end: start + selText.length,
+      text: selText,
+      color: DEFAULT_HIGHLIGHT_COLOR,
+      chapterTitle: chapterTitle(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    setTb({ x: rect.left + rect.width / 2, y: rect.top, mode: 'create', note: draft });
+  };
+
+  /** 点正文里已存在的高亮 → edit 浮层（桌面）。 */
+  const onMarkClick = (target: HTMLElement): void => {
+    const el = target.closest('[data-note-id]') as HTMLElement | null;
+    const nid = el?.getAttribute('data-note-id');
+    if (!nid) return;
+    const note = notes().find((n) => n.id === nid);
+    if (!note) return;
+    const rect = el!.getBoundingClientRect();
+    setTb({ x: rect.left + rect.width / 2, y: rect.top, mode: 'edit', note });
+  };
+
+  const applyColor = (color: HighlightColor): void => {
+    const cur = tb();
+    if (!cur) return;
+    const note = { ...cur.note, color };
+    void saveNote(note).then(() => id && loadNotes(id));
+    setTb({ ...cur, mode: 'edit', note });
+    window.getSelection()?.removeAllRanges();
+  };
+
+  const saveThought = (thought: string): void => {
+    const cur = tb();
+    if (!cur || cur.mode !== 'edit') return;
+    const note = { ...cur.note, thought };
+    void saveNote(note).then(() => id && loadNotes(id));
+    setTb({ ...cur, note });
+  };
+
+  const removeActiveNote = (): void => {
+    const cur = tb();
+    if (!cur) return;
+    void deleteNote(cur.note.id).then(() => id && loadNotes(id));
+    setTb(null);
+  };
+
+  /**
+   * 划线段渲染（返回 Index 句柄，直接进列容器，让 `white-space:pre-wrap` 作用到 inline span）：
+   * 统一用 span，反应式切换高亮 class（避免 mark/span 标签翻转）；高亮样式须布局中性（仅背景，无 padding）
+   * 以免影响已按纯文本度量的分页。
+   */
+  const segmentsIndex = (pageIndex: () => number) =>
+    Index({
+      each: () => pageSegments(pageIndex()),
+      render: (seg) =>
+        Span()
+          .class(() => (seg().note ? `wr-mark wr-mark-${seg().note!.color}` : ''))
+          .attr('data-note-id', () => seg().note?.id ?? '')
+          .text(() => seg().text),
+    });
+
+  /** 划线操作浮层（颜色 + 想法编辑 + 删除）。固定定位到选区/高亮上方。 */
+  const renderNoteToolbar = (): Child =>
+    Show({
+      when: () => tb() !== null,
+      children: () =>
+        Div()
+          .class('wr-note-toolbar')
+          .style('left', () => `${Math.round(tb()!.x)}px`)
+          .style('top', () => `${Math.round(tb()!.y)}px`)
+          .on('mousedown', (e: MouseEvent) => e.preventDefault()) // 保住选区/不触发外部关闭
+          .children(
+            Div()
+              .class('wr-note-colors')
+              .children(
+                ...HIGHLIGHT_COLORS.map((c) =>
+                  Span()
+                    .class(() => `wr-note-swatch wr-mark-${c} ${tb()?.note.color === c ? 'is-active' : ''}`)
+                    .on('click', () => applyColor(c)),
+                ),
+              ),
+            // 想法编辑 + 删除仅在已落库（edit）后出现；textarea 初值一次性 seed，输入中不被反应式重置。
+            Show({
+              when: () => tb()?.mode === 'edit',
+              children: () =>
+                Div()
+                  .class('wr-note-edit')
+                  .children(
+                    View('textarea')
+                      .class('wr-note-thought')
+                      .attr('placeholder', t('note_thought_placeholder'))
+                      .attr('rows', '2')
+                      .text(tb()?.note.thought ?? '')
+                      .on('change', (e: Event) => saveThought((e.target as HTMLTextAreaElement).value)),
+                    Div()
+                      .class('wr-note-actions')
+                      .children(
+                        View('a').class('wr-note-del').text(t('delete_note')).on('click', removeActiveNote),
+                      ),
+                  ),
+            }),
+          ),
+    });
 
   const toHome = (): void => {
     if (document.startViewTransition && id) {
@@ -182,7 +344,45 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     const el = showContainerRef.current;
     if (!el) return;
     const { content, title, chapters } = opts;
-    setTextSyntaxTree(transformTextToExpectedFormat({ content, title, container: el, chapters }));
+    lastChapters = chapters; // 记住当前章节，供阅读设置变更时按同章节重排
+    setTextSyntaxTree(
+      transformTextToExpectedFormat({
+        content,
+        title,
+        container: el,
+        chapters,
+        typography: settingsToTypography(getReadingSettings()),
+      }),
+    );
+  };
+
+  /**
+   * 把阅读设置落到阅读页根元素：CSS 变量（字号/行距/边距/字体）+ 主题 class（护眼/OLED）。
+   * 桌面根是独立的 `.wr-reader`（rootRef），移动端根同时是 morph 目标（containerRef）——取其一。
+   */
+  const applyReaderChrome = (): void => {
+    const el = rootRef.current ?? containerRef.current;
+    if (!el) return;
+    const s = getReadingSettings();
+    const vars = settingsToCssVars(s);
+    Object.entries(vars).forEach(([k, v]) => el.style.setProperty(k, v));
+    el.classList.remove('wr-theme-sepia', 'wr-theme-oled');
+    const cls = themeClass(s);
+    if (cls) el.classList.add(cls);
+  };
+
+  /**
+   * 阅读设置变更：先落 CSS（字号/边距即时生效、容器尺寸随边距变化），再按同章节 + 新排版倍率重排，
+   * 并按百分比把阅读位置映射到新分页（换字号/行距导致总页数变化时不丢位置）。
+   */
+  const onSettingsChange = (): void => {
+    applyReaderChrome();
+    if (!contentRef.current || !showContainerRef.current) return;
+    const oldTotal = getTextSyntaxTree().totalPage;
+    const percent = oldTotal > 0 ? getPageNum() / oldTotal : 0;
+    paginateToTree({ content: contentRef.current, title: bookDetail().title ?? '', chapters: lastChapters });
+    const newTotal = getTextSyntaxTree().totalPage;
+    setPageNum(Math.max(0, Math.min(Math.round(percent * newTotal), newTotal)));
   };
 
   const loadBook = (bookId: string): void => {
@@ -242,15 +442,21 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     tree().totalPage;
     if (progressRestored) savePos();
   });
-  // 容器挂载 + 布局后再跑分页（transformText 依赖真实 clientWidth/Height）
-  if (id) requestAnimationFrame(() => loadBook(id));
+  // 容器挂载 + 布局后：先落阅读设置（CSS 变量/主题），再跑分页（transformText 依赖真实 clientWidth/Height）
+  if (id) requestAnimationFrame(() => {
+    applyReaderChrome();
+    loadBook(id);
+  });
   // 目录里「识别章节」按钮的手动出口（省流量/慢网场景）→ 跑一次模型识别
   const onRunEnhance = (): void => void runDetect();
   syncHook.tap(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
+  // 阅读设置变更（字号/行距/边距/主题/字体）→ 落 CSS + 按同章节重排并保位置
+  syncHook.tap(EVENT_NAME.SET_READING_SETTINGS, onSettingsChange);
   onCleanup(() => {
     clearTimeout(detectTimer); // 快进快出：离开时取消待触发的自动分析
     clearChapterEditContext(); // 清理目录编辑上下文，避免下一本书误用
     syncHook.off(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
+    syncHook.off(EVENT_NAME.SET_READING_SETTINGS, onSettingsChange);
     setChapterDetect({ status: 'idle', phase: 'download', progress: 0 }); // 复位共享状态
   });
 
@@ -259,6 +465,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     bindKeyboardPaging();
     return Div()
       .class('wr-reader wr-reader-desktop')
+      .ref(rootRef)
       .children(
         Div()
           .class('wr-reader-inner')
@@ -286,10 +493,15 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
                     Div()
                       .class('wr-reader-col')
                       .ref(showContainerRef)
-                      .text(() => tree().pageText[pageNum()]?.text ?? ''),
+                      .on('mouseup', () => showContainerRef.current && onSelectEnd(showContainerRef.current, pageNum()))
+                      .on('click', (e: MouseEvent) => onMarkClick(e.target as HTMLElement))
+                      .children(segmentsIndex(() => pageNum())),
                     Div()
                       .class('wr-reader-col')
-                      .text(() => tree().pageText[pageNum() + 1]?.text ?? ''),
+                      .ref(colTwoRef)
+                      .on('mouseup', () => colTwoRef.current && onSelectEnd(colTwoRef.current, pageNum() + 1))
+                      .on('click', (e: MouseEvent) => onMarkClick(e.target as HTMLElement))
+                      .children(segmentsIndex(() => pageNum() + 1)),
                   ),
                 Div()
                   .class('wr-reader-nav')

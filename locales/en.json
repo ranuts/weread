@@ -39,5 +39,22 @@
   "edit_catalogue": "Edit catalogue",
   "delete_chapter": "Delete chapter",
   "delete_book": "Delete",
-  "delete_book_confirm": "Delete “{{0}}”? This can't be undone."
+  "delete_book_title": "Delete book",
+  "delete_book_confirm": "Delete “{{0}}”? This can't be undone.",
+  "cancel": "Cancel",
+  "reading_settings": "Reading settings",
+  "font_size": "Font size",
+  "line_spacing": "Line spacing",
+  "margin": "Margin",
+  "reading_theme": "Theme",
+  "body_font": "Font",
+  "margin_narrow": "Narrow",
+  "margin_normal": "Normal",
+  "margin_wide": "Wide",
+  "theme_system": "System",
+  "theme_sepia": "Sepia",
+  "theme_oled": "OLED",
+  "font_serif": "Serif",
+  "font_sans": "Sans",
+  "reset_settings": "Reset to defaults"
 }

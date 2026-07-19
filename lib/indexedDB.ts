@@ -85,6 +85,10 @@ export class WebDB {
         if (this.database && !this.database.objectStoreNames.contains('books_progress')) {
           this.database.createObjectStore('books_progress', { keyPath: 'id' });
         }
+        // v4：划线/笔记，key 为笔记 id（一本书多条），bookId 字段供按书过滤
+        if (this.database && !this.database.objectStoreNames.contains('books_notes')) {
+          this.database.createObjectStore('books_notes', { keyPath: 'id' });
+        }
         resolve({
           status: 'success',
           data: {
