@@ -91,7 +91,8 @@ const bindKeyboardPaging = (): void => {
         break;
       case ' ':
         e.preventDefault();
-        e.shiftKey ? pre(2) : next(2);
+        if (e.shiftKey) pre(2);
+        else next(2);
         break;
     }
   };
@@ -420,7 +421,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
           // 目录里**常驻**手动按钮：只要该语言有模型（available），随时可点「重新生成目录」重跑，不管缓存来源。
           const canDetect = hasModelForLang(bookChapters.lang);
           setChapterDetect({ status: canDetect ? 'available' : 'idle', phase: 'download', progress: 0 });
-          // 无缓存(pending) + 有模型 → **停在书上 ~700ms 才自动跑**首次分析（detectTimer，快进快出 700ms 内离开
+          // 无缓存 (pending) + 有模型 → **停在书上 ~700ms 才自动跑**首次分析（detectTimer，快进快出 700ms 内离开
           // 就不触发，避免反复启停模型实例）；模型权重由 SW 预取持久缓存、分析在 nlp worker 跑，不冻结 reader。
           if (bookChapters.source === 'pending' && canDetect) {
             detectTimer = setTimeout(() => void runDetect(), 700);
@@ -437,8 +438,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   prefetchModelsForLangs([uiLang()]);
   // 翻页/重排后防抖保存阅读进度（进度恢复完成后才存，避免初始 page 0 覆盖）。
   createEffect(() => {
-    pageNum();
-    tree().totalPage;
+    void pageNum();
+    void tree().totalPage;
     if (progressRestored) savePos();
   });
   // 翻页即关闭划线浮层（浮层锚在旧选区/高亮位置，翻页后已失效）。
@@ -566,7 +567,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     const onTouchEnd = (e: TouchEvent): void => {
       const dist = (e.changedTouches[0]?.clientX ?? 0) - touchStartX;
       if (Math.abs(dist) < 30) return;
-      dist > 0 ? pre() : next();
+      if (dist > 0) pre();
+      else next();
     };
     const onClick = (e: MouseEvent): void => {
       // 有选区（长按划线）时不翻页——交给 mouseup 弹划线浮层。
