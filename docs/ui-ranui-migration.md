@@ -33,6 +33,7 @@ weread 是隐私优先的纯前端阅读器（原 React 19 + Vite + Tailwind + P
 | Phase 3 | home 页重设计 + 响应式合并 | ✅ 完成（已浏览器验证：书架/搜索/主题/导航） |
 | Phase 4 | book-detail 页（含 AI 增强） | ✅ 完成（全流程浏览器验证：加载/翻页/目录/搜索/返回 + **AI 增强实测**：链接→检测→下载%→推理→重置） |
 | Phase 5 | 清理依赖/死代码，终版 build + 走查 | ✅ 完成（死依赖 Phase 1 已清；孤儿 scss 删除；alpha.4 升级 + 回退临时 workaround；终版 build 全绿） |
+| Phase 6 | 视觉再设计（脱离「太普通」）| ✅ 完成（生成式书封 + 品牌字标 + 纸面阅读器；明/暗双主题浏览器走查；client+server build 全绿） |
 
 ## Phase 0 — SSR 可行性 ✅
 
@@ -110,3 +111,15 @@ weread 是隐私优先的纯前端阅读器（原 React 19 + Vite + Tailwind + P
 2. 原 5 个组件 `.tsx` 仍在（未进构建图不编译），Phase 2 转 `.ts` 时删除。
 3. 契约不回归：r-input 原生 `change/input`、`item-id/item-index/title` 委托、`view-transition-name` morph、`/weread/` 字面量（BookCard href / manifest-url / SW scope / `/weread/models/`）、SW 缓存清单注入顺序、Worker `new URL('../workers/*.ts', import.meta.url)`。
 4. 客户端 hydration 采用 light-DOM 重建（`replaceChildren`）：外壳静态、数据客户端从 IndexedDB 加载，最简且正确。
+
+## Phase 6 — 视觉再设计 ✅
+
+反馈：迁移功能完备但「一点设计感都没有，太普通」。在**不动行为/数据层**（class 名、`item-id`/`view-transition-name`/ref 契约全保留）的前提下，纯表现层重做，全部基于 ranui Geist token（`--ran-color-*`/`--ran-shadow-*`/`--ran-radius-*`/`--ran-motion-ease-*`）。
+
+- **封面系统**（最大增益）：`BookCard` 从「白卡 + 文字」改成一张真正的书——有图用图，**无图按标题稳定哈希生成双色渐变书封**（`hueFromString` → `hsl` 渐变 + 竖排书脊光泽 `.wr-cover-spine` + 斜向高光 `.wr-cover-shine` + typeset 标题/作者）。悬停 spring 抬升 + 加重阴影。弃用 `<r-card>` 包裹（BookCard 去掉 `ranui/card` 依赖）。
+- **首页字标顶栏**：渐变 logo「W」+ wordmark「weread」+ i18n `tagline`；书架头加 `library_count` 计数 pill；「+」导入改虚线幽灵封面（尺寸与书封一致，hover 变主色）。首页背景加顶部主色径向辉光 + `bg-subtle`。
+- **阅读器纸面**：`bg-subtle` 底 + 白/深灰 elevated 纸面（border + 柔和大投影 + `radius-lg`），解决原「亮色 elevated=bg 纸面不可见」问题；顶栏书名/Home/Enhance 改 pill（Enhance 用 `color-mix` 主色淡底），翻页按钮改带阴影胶囊 + hover 抬升。
+- **搜索结果**：结果分组改 elevated 卡（border + 阴影），label 大写字距，命中高亮加粗主色。
+- **新增 i18n**：`tagline`/`library_count`（`{{0}}`）/`add_book`，三语（en/zh-CN/zh-HK）齐。
+
+**验证**：chrome-devtools 明/暗双主题走查首页 + 阅读器 + 搜索结果（生成式书封、辉光、纸面对比、pill 交互、蓝色高亮均正确，无 console 报错）；`vite build`（client 796kB·gzip 253kB / server 76.8kB）+ `--ssr` 均全绿；oxlint 仅剩 3 处**既有**三元语句告警（非本次引入）。改动文件：`components/BookCard/index.ts`、`pages/home/index.ts`、`styles/weread-components.css`、`locales/{en,zh-CN,zh-HK}.json`。
