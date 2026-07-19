@@ -23,8 +23,8 @@
 | **r-input focus 能力** | ✅ 已交付（ranui 源码） | 组件补 `focus()`/`blur()`/`select()`，见 §四 |
 | **`/` 聚焦搜索 + 全选** | ✅ 已交付 | 依赖上条；本地已 patch 验证通过，正式生效需 ranui 发版 + 升级（见 §四） |
 | **Vercel 质感深修** | 🚧 进行中 | 见 §二 |
-| 目录高亮当前章节 | ⬜ 规划 | 见 §三-1 |
-| 搜索结果键盘导航 | ⬜ 规划 | 见 §三-2 |
+| 目录高亮当前章节 | ✅ 已交付 | 当前章左侧墨色竖条 + 提亮，浮层打开/翻页自动滚入视口（IntersectionObserver）；见 §三-1 |
+| 搜索结果键盘导航 | ✅ 已交付 | 首页 + 书内搜索均支持 ↑/↓ 移高亮、Enter 打开/跳页；见 §三-2 |
 | 大书分页移出主线程 | ⬜ 规划（性能） | 见 §三-3 |
 
 ---
@@ -33,7 +33,7 @@
 
 现状：外壳干净但偏"平"——顶栏松散、区块无 hairline 焊接、留白空、焦点态缺失。目标是补上 Geist 产品的"结构感"。
 
-0. **主色调 → Vercel 黑白单色**（全站默认基调）：把 `--ran-color-primary` 一族在 `styles/theme.scss` 重指向 ranui **contrast** token（亮=近黑、暗=近白，自翻转），去掉蓝强调色；徽标/焦点环/链接/loading 统一墨色。对齐 ran.chaxus.com / edit.chaxus.com。
+0. **主色调 → Vercel 黑白单色**（已提升到 ranui 组件库层，全站默认基调）：见 §六。weread 侧因此**移除了本地 primary 覆盖**，徽标改用 `--ran-color-primary` + `--ran-color-primary-text`，焦点描边改用 `--ran-color-link`（保持蓝）。
 1. **粘性 Geist 顶栏**：`.wr-home-header` → 全宽 sticky bar（`backdrop-filter: blur(12px)` 单薄条 + 底部 1px hairline + `--ran-color-bg` 半透），内容对齐 72rem 容器。是"产品感"最大的信号。
 2. **hairline 焊接 + 节奏收紧**：区块间距走 `--ran-space-*`（section 32–40px），书架头加 hairline，压掉搜索→书架之间的空旷。
 3. **焦点可达性（Geist 焦点环）**：书卡 / 导入卡 / 交互元素统一 `:focus-visible` → `--ran-focus-ring`（或 `outline: 2px var(--ran-color-primary); offset 2px`）。键盘可达 + 观感都升级。
@@ -71,6 +71,17 @@
 - 经验已沉淀到 survival 记忆 `ranui-input-behavior`。
 
 ---
+
+## 六、ranui 主色调改单色（组件库层，2026-07-19）
+
+把「Vercel 黑白主色」从项目覆盖上升为 **ranui 默认基调**（源码 `~/Documents/code/ran/packages/ranui`）：
+
+- `--ran-color-primary/-hover/-active` 直接映射单色（gray-1000 + `#383838`/`#4d4d4d`，暗色 `#cccccc`/`#b3b3b3`），新增 **`--ran-color-primary-text`**（= background-100，ON-primary 反色墨，随主题翻转——单色 primary 上的文字/图标必须用它）。
+- `--ran-color-link` 保持 geist-blue；`--ran-focus-ring` 从 primary 解耦、钉到 blue-700 → **链接与焦点保持蓝**。
+- **移除** 冗余的 `--ran-color-contrast-*` 与 `r-button type="contrast"`（primary 现在本身即单色动作，默认 `type="primary"` 按钮就是黑白）。button 的 primary 文案/涟漪/hover 改用 `--ran-color-primary-text`。
+- 配套：DESIGN.md 教义更新、`doc:style`/`doc:api` 重生成、CHANGELOG 记账（标 breaking, pre-release）、契约测试更新，`test:unit` 1131 passed、`tsc` 通过、`build` 通过。ranui demo 亮暗双验证：primary 按钮黑白且文字翻转、链接/焦点蓝。
+- **e2e 快照待更新**：primary 按钮由蓝变黑，`test/e2e/*button*` 等快照需 `npm run test:update` 重生成（未在本环境跑）。
+- **落到 weread**：需 ranui 发版（alpha.6+）+ weread 升级。当前为验证已把重建 dist 临时 patch 进 weread 的 `node_modules`（`pnpm install` 会覆盖）——发版后即为正式。
 
 ## 五、验证协议（Definition of Done）
 

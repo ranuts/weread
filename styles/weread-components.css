@@ -152,7 +152,7 @@
   outline: none;
 }
 .wr-book-card:focus-visible .wr-cover {
-  outline: 2px solid var(--ran-color-primary);
+  outline: 2px solid var(--ran-color-link);
   outline-offset: 3px;
 }
 .wr-book-card-meta {
@@ -207,9 +207,9 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 13px;
-  /* 墨色单色徽标：亮=黑底白字、暗=白底黑字（contrast token 自翻转）。 */
-  background: var(--ran-color-contrast-bg);
-  color: var(--ran-color-contrast-text);
+  /* 墨色单色徽标：亮=黑底白字、暗=白底黑字（primary + primary-text 自翻转）。 */
+  background: var(--ran-color-primary);
+  color: var(--ran-color-primary-text);
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -240,13 +240,17 @@
   margin: 0 auto;
   border-radius: 2rem;
 }
-.wr-home-search-field:focus-within {
-  box-shadow: var(--ran-focus-ring);
-}
+/* 聚焦焦点环画在 r-input 自己的 active 层（贴合胶囊、无缝隙），而非外层容器——
+   否则外层环比内部 pill 大一圈，出现「双层边框 + 间隙」。用 link 蓝与全站焦点色一致。 */
 .wr-home-input {
   display: block;
   width: 100%;
   height: 3.4rem;
+  --ran-input-active-outline: none;
+  --ran-input-active-border-color: var(--ran-color-link);
+  --ran-input-active-box-shadow:
+    0 0 0 1px var(--ran-color-link),
+    0 0 0 4px color-mix(in srgb, var(--ran-color-link) 20%, transparent);
 }
 /* "/" 快捷键提示芯片（键帽），聚焦或有输入时隐藏。 */
 .wr-home-kbd {
@@ -313,6 +317,11 @@
 .wr-home-result-row:hover {
   background: var(--ran-color-bg-hover);
 }
+/* 键盘选中行：底色 + 左侧墨色竖条（与 hover 区分、指示"回车打开这条"）。 */
+.wr-home-result-row.is-highlighted {
+  background: var(--ran-color-bg-hover);
+  box-shadow: inset 3px 0 0 var(--ran-color-primary);
+}
 .wr-home-result-cover {
   width: 3rem;
   flex: none;
@@ -341,7 +350,7 @@
   word-break: break-all;
 }
 .wr-home-hit {
-  color: var(--ran-color-primary);
+  color: var(--ran-color-link);
   font-weight: 600;
 }
 .wr-home-loading,
@@ -455,7 +464,7 @@
   outline: none;
 }
 .wr-home-add:focus-visible .wr-home-add-inner {
-  outline: 2px solid var(--ran-color-primary);
+  outline: 2px solid var(--ran-color-link);
   outline-offset: 3px;
   border-color: var(--ran-color-primary);
   color: var(--ran-color-primary);
@@ -514,10 +523,17 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 0.85rem;
   flex: none;
   padding: 0 2.25rem;
   height: 2.5rem;
   --ran-icon-color: var(--ran-color-text-secondary);
+}
+.wr-catalogue-edit {
+  cursor: pointer;
+}
+.wr-catalogue-edit.active {
+  --ran-icon-color: var(--ran-color-primary);
 }
 .wr-catalogue-sort-icon {
   cursor: pointer;
@@ -531,23 +547,63 @@
   overflow-y: auto;
 }
 .wr-catalogue-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0 1.75rem;
-  height: 3rem;
+  min-height: 3rem;
   font-size: 0.95rem;
   color: var(--ran-color-text-secondary);
   cursor: pointer;
+  border-top: 1px solid var(--ran-color-border-secondary);
   transition: color var(--ran-motion-duration-fast, 0.15s);
 }
 .wr-catalogue-item:hover {
   background: var(--ran-color-bg-hover);
   color: var(--ran-color-text);
 }
+/* 当前阅读章节：左侧墨色竖条 + 提亮文字 + 轻底，定位"我读到哪"。 */
+.wr-catalogue-item.is-active {
+  color: var(--ran-color-text);
+  font-weight: 550;
+  background: var(--ran-color-bg-hover);
+  box-shadow: inset 3px 0 0 var(--ran-color-primary);
+}
+/* 当前阅读所在章 */
+.wr-catalogue-item.is-active {
+  color: var(--ran-color-primary);
+  font-weight: 600;
+}
 .wr-catalogue-item-inner {
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   align-items: center;
-  height: 100%;
-  width: 100%;
-  border-top: 1px solid var(--ran-color-border-secondary);
+  padding: 0.5rem 0;
+}
+/* 编辑态：标题就地可编辑 */
+.wr-catalogue.editing .wr-catalogue-item {
+  cursor: text;
+}
+.wr-catalogue-item-inner[contenteditable] {
+  outline: none;
+  cursor: text;
+  color: var(--ran-color-text);
+  border-bottom: 1px dashed var(--ran-color-primary);
+}
+/* 删除按钮：默认隐藏，编辑态才显示 */
+.wr-catalogue-del {
+  display: none;
+  flex: none;
+  cursor: pointer;
+  --ran-icon-color: var(--ran-color-text-secondary);
+  transition: color var(--ran-motion-duration-fast, 0.15s);
+}
+.wr-catalogue.editing .wr-catalogue-del {
+  display: inline-flex;
+}
+.wr-catalogue-del:hover {
+  --ran-icon-color: var(--ran-color-danger);
 }
 
 /* ── DetailMenu（搜索菜单）───────────────────────────────────────────────── */
@@ -586,8 +642,14 @@
   background: var(--ran-color-bg-hover);
   color: var(--ran-color-text);
 }
+/* 键盘选中命中行：底色 + 左侧墨色竖条。 */
+.wr-menu-result-line.is-highlighted {
+  background: var(--ran-color-bg-hover);
+  color: var(--ran-color-text);
+  box-shadow: inset 3px 0 0 var(--ran-color-primary);
+}
 .wr-menu-result-hit {
-  color: var(--ran-color-primary);
+  color: var(--ran-color-link);
   font-weight: 600;
 }
 .wr-menu-empty {
@@ -822,7 +884,7 @@
 .wr-reader-home:focus-visible,
 .wr-reader-book-title:focus-visible,
 .wr-operate-trigger:focus-visible {
-  outline: 2px solid var(--ran-color-primary);
+  outline: 2px solid var(--ran-color-link);
   outline-offset: 2px;
 }
 

@@ -33,5 +33,7 @@
   "enhanceHint": "Rules may miss chapters — re-detect with the AI model (downloads once)",
   "modelDownloading": "Downloading model",
   "modelEnhancing": "Detecting",
-  "enhanceNoMore": "No additional chapters found"
+  "enhanceNoMore": "No additional chapters found",
+  "edit_catalogue": "Edit catalogue",
+  "delete_chapter": "Delete chapter"
 }
