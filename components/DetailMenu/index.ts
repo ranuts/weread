@@ -1,7 +1,7 @@
 import 'ranui/input';
 import 'ranui/icon';
 import { debounce, getMatchingSentences } from 'ranuts/utils';
-import { Div, Span, View, createEffect, createRef, signal } from 'ranui/builder';
+import { Div, For, Show, Span, View, signal } from 'ranui/builder';
 import { getTextSyntaxTree, setPageNum } from '@/lib/subscribe';
 import { trim } from '@/lib/transformText';
 import { renderCatalogue } from '@/components/Catalogue';
@@ -82,8 +82,6 @@ const buildEmpty = (): ElementBuilder =>
 export const renderBookDetailMenu = (): ElementBuilder => {
   const [showSearchResult, setShowSearchResult] = signal(false);
   const [searchResult, setSearchResult] = signal<SearchResultItem[]>([]);
-  const resultRef = createRef<HTMLDivElement>();
-
   const onSearch = debounce((e: Event): void => {
     const searchValue = trim((e.target as HTMLInputElement)?.value || '');
     if (!searchValue) {
@@ -100,15 +98,6 @@ export const renderBookDetailMenu = (): ElementBuilder => {
     setPageNum(Number(index));
   };
 
-  // 搜索结果响应式重建（首帧 el 尚未 build，跳过；输入后填充）。
-  createEffect(() => {
-    const result = searchResult();
-    const el = resultRef.current;
-    if (!el) return;
-    const nodes = result.length > 0 ? result.map((item) => buildResultGroup(item).build()) : [buildEmpty().build()];
-    el.replaceChildren(...nodes);
-  });
-
   return Div()
     .class('wr-menu')
     .children(
@@ -121,12 +110,24 @@ export const renderBookDetailMenu = (): ElementBuilder => {
             .style(INPUT_CSS_VARS)
             .on('change', onSearch),
         ),
-      // 目录常驻构建（保留其响应式），随搜索态切换显隐。
+      // 目录常驻构建（保留其滚动/响应式），随搜索态切换显隐。
       renderCatalogue().style('display', () => (showSearchResult() ? 'none' : 'flex')),
+      // 搜索结果：Show 切换空/非空，For 按分组 keyed 复用；点击 item-index 委托跳页。
       Div()
         .class('wr-menu-result')
-        .ref(resultRef)
         .on('click', onSearchResult)
-        .style('display', () => (showSearchResult() ? 'block' : 'none')),
+        .style('display', () => (showSearchResult() ? 'block' : 'none'))
+        .children(
+          Show({
+            when: () => searchResult().length > 0,
+            children: () =>
+              For({
+                each: () => searchResult(),
+                key: (item) => item.index,
+                render: (item) => buildResultGroup(item),
+              }),
+            fallback: () => buildEmpty(),
+          }),
+        ),
     );
 };

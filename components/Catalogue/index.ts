@@ -1,10 +1,9 @@
 import 'ranui/icon';
-import { Div, View, createEffect, createRef, signal } from 'ranui/builder';
+import { Div, Index, View, createRef, signal } from 'ranui/builder';
 import { EVENT_NAME, getCurrentBookDetail, getTextSyntaxTree, setPageNum, syncHook } from '@/lib/subscribe';
 import { fromStore } from '@/lib/reactive';
 import { SORT_DIRECTION } from '@/lib/enums';
 import type { ElementBuilder } from 'ranui/builder';
-import type { TextSyntaxTree } from '@/lib/transformText';
 
 const SORT_ICON_FONT_SIZE = '20px';
 
@@ -26,19 +25,10 @@ const toPage = (e: Event): void => {
   syncHook.call(EVENT_NAME.CLOSE_POPOVER);
 };
 
-/** 由语法树构建目录条目列表（title 属性承载章节 index，供委托点击读取）。 */
-const buildItems = (tree: TextSyntaxTree): ElementBuilder[] =>
-  (tree?.titleIdTitle ?? []).map((item, index) =>
-    Div()
-      .class('wr-catalogue-item')
-      .attr('title', `${index}`)
-      .children(Div().class('wr-catalogue-item-inner').attr('title', `${index}`).text(item)),
-  );
-
 /**
  * 目录：书籍信息头 + 排序按钮 + 可滚动章节列表。
- * 列表随 `SET_TEXT_SYNTAX_TREE` 响应式重建（数据从 IndexedDB 异步加载后填充）。
- * 必须在 `createRoot` 作用域内调用。
+ * 章节列表用 `Index`（按位置 keyed，item 是 signal）随 `SET_TEXT_SYNTAX_TREE` 就地更新，
+ * `title` 属性承载章节 index 供委托点击读取。必须在 `createRoot` 作用域内调用。
  */
 export const renderCatalogue = (): ElementBuilder => {
   const bookDetail = fromStore(getCurrentBookDetail, EVENT_NAME.SET_CURRENT_BOOK_DETAIL);
@@ -58,14 +48,6 @@ export const renderCatalogue = (): ElementBuilder => {
       setSortDirection(SORT_DIRECTION.DOWN);
     }
   };
-
-  // 语法树到位后重建目录条目（首帧 el 尚未 build，跳过；store 更新后填充）。
-  createEffect(() => {
-    const items = buildItems(tree());
-    const el = scrollRef.current;
-    if (!el) return;
-    el.replaceChildren(...items.map((b) => b.build()));
-  });
 
   return Div()
     .class('wr-catalogue')
@@ -95,6 +77,15 @@ export const renderCatalogue = (): ElementBuilder => {
         .class('wr-catalogue-list')
         .ref(scrollRef)
         .on('click', toPage)
-        .children(...buildItems(tree())),
+        .children(
+          Index({
+            each: () => tree().titleIdTitle ?? [],
+            render: (title, i) =>
+              Div()
+                .class('wr-catalogue-item')
+                .attr('title', `${i}`)
+                .children(Div().class('wr-catalogue-item-inner').attr('title', `${i}`).text(title)),
+          }),
+        ),
     );
 };

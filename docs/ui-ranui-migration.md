@@ -56,15 +56,17 @@ weread 是隐私优先的纯前端阅读器（原 React 19 + Vite + Tailwind + P
 
 - [x] `Popover`（`renderPopover`）：`<r-popover>`+`<r-content>`（后者由 `import 'ranui/popover'` 自带，**不要**单独 `import 'ranui/content'`——该子路径 rolldown 解析失败）。`syncHook.tap(CLOSE_POPOVER)` + `onCleanup` 解绑，命令式 `closePopover()` 经 `createRef` 调组件实例方法。
 - [x] `BookCard`（`renderBookCard(book)`）：外层 `<a>`（href/morph/click）内嵌 `<r-card hoverable>`。`view-transition-name: book-info-${id}` + `startViewTransition` + `/weread/book-detail?id=` 整页跳转 + `clear()` 三信号 `batch()` 重置。**新增 `e.preventDefault()`**：否则 `<a>` 默认导航抢占，morph 不生效（原 React 版缺此，实为契约的正确实现）。响应式尺寸交给 CSS（P3 合并 desktop/mobile 的落点）。
-- [x] `Catalogue`（`renderCatalogue`）：`fromStore` 桥接 `SET_TEXT_SYNTAX_TREE`/`SET_CURRENT_BOOK_DETAIL`；章节列表用 `createEffect` + `createRef` 响应式重建（**首帧 el 未 build → 早退跳过**，store 异步加载后填充）；`toPage` 委托点击读 `title` 属性；排序方向 signal 绑定图标 `.class()` 旋转。
-- [x] `DetailMenu`（`renderBookDetailMenu`）：`<r-input>` 原生 `change`（防抖 500ms）；`showSearchResult` signal 用 `.style('display', getter)` 切换目录/结果（目录常驻构建以保留其响应式，仅显隐切换）；结果列表 `createEffect` 重建 + `item-index` 委托跳页；空态 `r-icon`。
+- [x] `Catalogue`（`renderCatalogue`）：`fromStore` 桥接 `SET_TEXT_SYNTAX_TREE`/`SET_CURRENT_BOOK_DETAIL`；章节列表用 **`Index`**（按位置 keyed，item 是 signal，随语法树就地更新）；`toPage` 委托点击读 `title` 属性；排序方向 signal 绑定图标 `.class()` 旋转（`createRef`/`scrollRef` 仅留给 toSort 的命令式滚动）。
+- [x] `DetailMenu`（`renderBookDetailMenu`）：`<r-input>` 原生 `change`（防抖 500ms）；`showSearchResult` signal 用 `.style('display', getter)` 切换目录/结果（目录常驻构建以保留其滚动/响应式，仅显隐切换）；结果用 **`Show`**（空/非空）+ **`For`**（按分组 `index` keyed）+ `item-index` 委托跳页；空态 `r-icon`。
 - [x] `DetailOperate`（`renderBookDetailOperate` / `renderMobileBookDetailOperate`）：Popover + menu 图标薄封装，overlay 传 `renderBookDetailMenu()`。
 
 **样式落点**：不在组件 `.ts` 内 `import scss`（保持纯逻辑 / SSR·esbuild 安全），集中于新建 `styles/weread-components.css`，由 `styles/base.css` `@import`（仅 client 侧引入，server 只序列化结构无需样式）。含补齐的 `.hover-icon`（原 Tailwind 无定义）。
 
-**builder 关键约束（踩坑）**：`.children()` **只接静态节点**（`ElementBuilder|HTMLElement|string|null`），**不接 getter**——反应式条件节点（如封面 img 有无）改用 `.attr('src', getter)` + `.style('display', getter)`；反应式列表改用 `createEffect` 里 `el.replaceChildren(...builders.map(b=>b.build()))`（配 `createRef` 早退）。单值文本/属性用 `.text(getter)` / `.attr(name,getter)` / `.class(getter)`。
+**builder 反应式（已随 ranui `0.2.1-alpha.3` 升级，摩擦点已在上游修掉）**：迁移中把踩到的坑反馈进了 ranui（改在 `~/Documents/code/ran`），现 `.children()` 除静态节点外还接：**getter**（粗粒度整块重建，兜底）、**`Show`/`Switch`**（细粒度条件，仅真假翻转时重建）、**`For`/`Index`**（keyed 列表，复用节点）。单值仍用 `.text/.attr/.class/.style(getter)`。原则:值→getter 绑定;条件→`Show`;列表→`For`(按 id)/`Index`(按位置);getter 仅兜底——**不要**再手写 `createEffect`+`createRef`+`replaceChildren` 那套（`createRef` 只留给命令式 DOM 操作，如目录排序滚动）。
 
-**验证证据**：因页面仍是骨架、组件尚未进构建图，临时在 `views/client.ts` 加探针 `import` 全部 5 组件跑 `pnpm build:client`（真实 vite + alias + ranui 子路径解析）→ 通过后移除探针。终版 `pnpm build` 全绿（server 2.5kB / client 370kB·gzip 104kB / CSS 14.67kB↑含组件样式 / 91 模块 / SSG 三页外壳仍完整）。**运行时浏览器走查随 P3（BookCard 进 home）/ P4（Operate·Menu·Catalogue·Popover 进 book-detail）接线时一并做。**
+**alpha.3 落地重构**：`Catalogue` 章节列表 `createEffect`+`replaceChildren` → **`Index`**；`DetailMenu` 搜索结果 `createEffect`+`resultRef` → **`Show`+`For`**。两处删掉「首帧 el 未 build 早退」样板。
+
+**验证证据**：因页面仍是骨架、组件尚未进构建图，临时在 `views/client.ts` 加探针 `import` 全部 5 组件跑 `pnpm build:client`（真实 vite + alias + ranui 子路径解析）→ 通过后移除探针。终版 `pnpm build` 全绿（server 2.5kB / client 375kB·gzip 105.5kB / CSS 14.98kB / SSG 三页外壳仍完整）。**运行时浏览器走查随 P3（BookCard 进 home）/ P4（Operate·Menu·Catalogue·Popover 进 book-detail）接线时一并做。**
 
 ## Phase 3 — home 页重设计 ⬜
 
