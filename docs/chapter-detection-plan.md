@@ -160,16 +160,22 @@ P4 的目录编辑 UI 顺延到模型就位后（用户修正即增量标注）�
 
 ### 5.2 规划（按序实施，性价比降序）
 
-1. **worker 分批推理 + 推理进度**（`workers/nlpWorker.ts`）：现为单次大 batch
-   `tokenizer(allLines, {padding:true})` + 一次前向 → 峰值内存高、无进度、大英文书 WASM 实测 ~75s。
-   改按批（32/64）循环推理，每批 `postMessage` 进度；主线程把「识别中」显示成真实百分比。
-   —— 直接治「自动增强跑 75s 且全程误显『下载 100%』」。
+1. ✅ **worker 分批推理 + 推理进度**（2026-07-19，`workers/nlpWorker.ts`）：单次大 batch 改按
+   `CLASSIFY_BATCH_SIZE=64` 循环前向，每批 `postMessage` `status:'classifying'` 进度 0-100；
+   进度经 `classifyLines({onProgress})` → `detectChaptersWithModel` → `enhanceChaptersWithModel`
+   透传回 UI。阅读页加 `enhancePhase` 信号，文案随 status 从「下载模型 X%」切「识别中 X%」。
+   分批 padding 按本批最长（降峰值张量），attention_mask 屏蔽 padding 不影响每行 logits。
+   浏览器实测：Walden(none/en) 自动增强文案「下载100%」→「识别中」→「识别中 42%」逐步推进、跑完清空、无报错。
+   **注**：WASM 首批仍有 warmup（~秒级 0%），大书总时长仍偏长——真正提速要 WebGPU / 更小骨干 / int4，属体积线。
 2. **enhance 复用规则层已算结果**：`enhanceChaptersWithModel` 现重复 `arrayBufferToString`+
    `detectLanguage`+内部 `collectCandidates`，而 `resolveBookChapters` 打开书时已算过（lang 已入缓存）。
-   把 text/lang/规则候选透传进来，去掉三处重复（大书增强明显更快）。
-3. **成功判据改「比质量」+ 失败反馈**：现仅 `chapters.length<=ruleChapters.length` 比数量（规则误报多、
-   模型正确少时会误弃更优结果）。改为覆盖度 + 间距均匀度 + 章节数合理性打分；手动增强无改善时给
-   toast 反馈（现在静默像坏了），并提供「回退规则 / 重新识别」出口。
+   把 text/lang/规则候选透传进来，去掉三处重复（大书增强明显更快）。**需把 text 从 resolve 侧线程化到
+   enhance/transformText，属中等重构。**
+3. **成功判据改「比质量」+ 失败反馈**：
+   - ✅ 失败反馈（2026-07-19）：`runEnhance(auto)` 区分自动/手动；手动无改善弹短暂提示
+     `enhanceNoMore`（4s 自动消失），自动路径保持静默。i18n 三语齐。
+   - ⬜ 成功判据改「比质量」：现仍 `chapters.length<=ruleChapters.length` 比数量（规则误报多、
+     模型正确少时会误弃更优结果）。待改为覆盖度 + 间距均匀度 + 章节数合理性打分，并提供「回退规则」出口。
 4. **模型无编号家族的结构层过滤**（`lib/chapter/validate.ts`）：model 家族现只过 gap + minCount3、
    无 LIS/contiguity，precision~0.34 的假阳性几乎不被挡。加位置均匀性/间距方差离群剔除，或按语言提阈值
    （zh 0.6–0.7、en 0.5；`threshold` 已可配但 UI 未传）。
