@@ -1,0 +1,189 @@
+/* Phase 2 叶子组件样式（Geist token）。集中于此、由 base.css @import，
+   使组件 .ts 保持纯逻辑（SSR / esbuild 安全，不内联 scss）。 */
+
+/* 图标悬停：默认次要色，hover 提亮到主文本色。 */
+.hover-icon {
+  cursor: pointer;
+  --ran-icon-color: var(--ran-color-text-secondary);
+  transition: color var(--ran-motion-duration-base, 0.2s);
+}
+.hover-icon:hover {
+  --ran-icon-color: var(--ran-color-text);
+}
+
+/* ---------- BookCard ---------- */
+.wr-book-card {
+  display: block;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform var(--ran-motion-duration-base, 0.2s);
+}
+.wr-book-card:hover {
+  transform: scale(1.05);
+}
+.wr-book-card-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--ran-space-4, 1rem);
+  padding: var(--ran-space-4, 1rem);
+  height: 100%;
+}
+.wr-book-card-cover {
+  flex: none;
+  height: 6rem;
+  object-fit: cover;
+  border-radius: var(--ran-radius-sm, 4px);
+}
+.wr-book-card-meta {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.wr-book-card-title {
+  color: var(--ran-color-text);
+  font-weight: 500;
+}
+.wr-book-card-author {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ran-color-text-secondary);
+}
+
+/* 响应式：窄屏收窄卡片、隐藏封面（Phase 3 合并 desktop/mobile 的落点）。 */
+@media (max-width: 768px) {
+  .wr-book-card-cover {
+    display: none;
+  }
+}
+
+/* ---------- Catalogue ---------- */
+.wr-catalogue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.wr-catalogue-header {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--ran-space-4, 1rem);
+  padding: 0.5rem 1.75rem;
+}
+.wr-catalogue-cover {
+  width: 3.5rem;
+  border-radius: var(--ran-radius-sm, 4px);
+}
+.wr-catalogue-title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--ran-color-text);
+  word-break: break-all;
+}
+.wr-catalogue-author {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ran-color-text-secondary);
+  word-break: break-all;
+}
+.wr-catalogue-sort {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: none;
+  padding: 0 2.25rem;
+  height: 2.5rem;
+}
+.wr-catalogue-sort-icon {
+  transition: transform var(--ran-motion-duration-base, 0.2s);
+}
+.wr-catalogue-sort-icon.UP {
+  transform: rotate(180deg);
+}
+.wr-catalogue-list {
+  flex: auto;
+  overflow-y: auto;
+}
+.wr-catalogue-item {
+  padding: 0 1.75rem;
+  height: 3rem;
+  font-size: 1rem;
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+}
+.wr-catalogue-item:hover {
+  background: var(--ran-color-bg-hover);
+}
+.wr-catalogue-item-inner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  border-top: 1px solid var(--ran-color-border);
+}
+
+/* ---------- DetailMenu ---------- */
+.wr-menu {
+  display: flex;
+  flex-direction: column;
+  width: 28rem;
+  max-width: 90vw;
+  height: calc(100vh - 8rem);
+}
+.wr-menu-search {
+  flex: none;
+  padding: 1.75rem 1.5rem;
+}
+.wr-menu-result {
+  flex: auto;
+  overflow-y: auto;
+  padding-bottom: 1.75rem;
+}
+.wr-menu-result-title {
+  padding: 0.5rem 1.5rem;
+  font-size: 1rem;
+  color: var(--ran-color-text);
+}
+.wr-menu-result-line {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+}
+.wr-menu-result-line:hover {
+  background: var(--ran-color-bg-hover);
+}
+.wr-menu-result-hit {
+  color: var(--ran-color-primary);
+}
+.wr-menu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+.wr-menu-empty-text {
+  font-size: 1rem;
+  color: var(--ran-color-text-secondary);
+}
+
+/* ---------- DetailOperate ---------- */
+.wr-operate {
+  position: absolute;
+  top: 4rem;
+  right: 5.5rem;
+}
+.wr-operate-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: var(--ran-color-bg-elevated);
+  cursor: pointer;
+}
+.wr-operate-mobile {
+  cursor: pointer;
+}
