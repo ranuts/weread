@@ -16,6 +16,8 @@ import { resumeDB } from '@/store';
 import { checkEncoding, createReader, trim } from '@/lib/transformText';
 import { BOOKS_ADD_BY_DEFAULT, ensampleConfigs } from '@/lib/ensample';
 import { renderBookCard } from '@/components/BookCard';
+import { getAllProgress } from '@/store/progress';
+import type { ReadingProgress } from '@/store/progress';
 import { prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { ROUTE_PATH } from '@/router';
 import { t } from '@/locales';
@@ -121,6 +123,7 @@ const resultRow = (book: BookInfo, term: string, extra?: ElementBuilder): Elemen
  */
 export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   const [bookList, setBookList] = signal<BookInfo[]>([]);
+  const [progress, setProgress] = signal<Record<string, ReadingProgress>>({}); // 书架阅读进度（id → 进度）
   const [searchValue, setSearchValue] = signal('');
   const [searchLoading, setSearchLoading] = signal(false);
   const [titleResult, setTitleResult] = signal<BookInfo[]>([]);
@@ -150,8 +153,10 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   const loadBooks = (): void => {
     getAllBooks<BookInfo>()
       .then((res) => {
-        if (!res.error) setBookList(res.data);
-        else resumeDB().then(loadBooks);
+        if (!res.error) {
+          setBookList(res.data);
+          getAllProgress().then(setProgress); // DB 就绪后再拉进度（书架进度条）
+        } else resumeDB().then(loadBooks);
       })
       .catch(() => resumeDB().then(loadBooks));
   };
@@ -253,7 +258,7 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
       });
       localStorage.setItem(BOOKS_ADD_BY_DEFAULT, 'true');
     }
-    loadBooks();
+    loadBooks(); // 书架 + 阅读进度（loadBooks 成功后拉进度）
     window.addEventListener('keydown', onKey);
     onCleanup(() => window.removeEventListener('keydown', onKey));
     // 高亮同步：selected 或结果变化后，把 .is-highlighted 落到第 selected 行并滚入视口。
@@ -430,7 +435,11 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
                         ),
                     ),
                   // 书架栅格：For 按 book.id keyed 复用卡片
-                  For({ each: () => bookList(), key: (b) => b.id, render: (b) => renderBookCard(b, removeBook) }),
+                  For({
+                    each: () => bookList(),
+                    key: (b) => b.id,
+                    render: (b) => renderBookCard(b, removeBook, () => progress()[b.id]?.percent ?? 0),
+                  }),
                 ),
             ),
       }),

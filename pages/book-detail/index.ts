@@ -5,8 +5,8 @@ import { debounce, getQuery } from 'ranuts/utils';
 import { Div, Span, View, createEffect, createRef, onCleanup, signal } from 'ranui/builder';
 import { getBookById } from '@/store/books';
 import { detectChaptersByModel, hasModelForLang, resolveBookChapters } from '@/store/chapters';
+import { prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { getProgress, restorePage, saveProgress } from '@/store/progress';
-import { canAutoEnhance, prefetchModelsForLangs, uiLang } from '@/lib/nlp/modelCache';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
@@ -101,6 +101,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   const pageNum = fromStore(getPageNum, EVENT_NAME.SET_CURRENT_BOOK_PAGE);
   // 章节自动识别（模型增强）状态经共享 store 上报，目录模块就地显 loading / 手动入口。
   let enhancing = false; // 重入保护
+  let detectTimer: ReturnType<typeof setTimeout> | undefined; // 停留 700ms 才自动分析（快进快出不触发）
 
   // 续读：进度恢复完成前不写，避免初始 page 0 覆盖已存进度。
   let progressRestored = false;
@@ -216,22 +217,14 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               chapters: bookChapters.chapters.map((c) => ({ ...c })),
             });
           }
-          // 自动目录：分页已同步出好（reader 立即可读，整本一章）。无缓存(pending) → 交给模型识别
-          // （唯一路径），目录里显 loading；模型推理在 nlp worker，不冻结 reader。
-          if (bookChapters.source === 'pending') {
-            if (hasModelForLang(bookChapters.lang)) {
-              // 网络允许（已缓存/非省流量）就直接下模型跑，否则目录显「识别章节」手动按钮
-              canAutoEnhance(bookChapters.lang).then((ok) => {
-                if (ok) void runDetect();
-                else setChapterDetect({ status: 'available', phase: 'download', progress: 0 });
-              });
-            } else {
-              // 该语言无模型 → 无法自动识别，保持整本一章
-              setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
-            }
+          // 章节自动分析：无缓存(pending) + 该语言有模型 → **停在书上 ~700ms 才自动跑**分析（用
+          // detectTimer，快进快出在 700ms 内离开就不触发，避免反复启停模型实例）；模型权重由 SW 预取
+          // 持久缓存、分析在 nlp worker 跑，不冻结 reader。已缓存直接用；旧规则/caption 缓存给手动「分析章节」升级入口。
+          if (bookChapters.source === 'pending' && hasModelForLang(bookChapters.lang)) {
+            detectTimer = setTimeout(() => void runDetect(), 700);
           } else {
-            // 已有缓存(model/manual/caption) → 目录即终态
-            setChapterDetect({ status: 'idle', phase: 'download', progress: 0 });
+            const canUpgrade = bookChapters.source !== 'model' && hasModelForLang(bookChapters.lang);
+            setChapterDetect({ status: canUpgrade ? 'available' : 'idle', phase: 'download', progress: 0 });
           }
         });
       })
@@ -240,8 +233,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       });
   };
 
-  // 打开阅读页即后台预取本地语言的章节模型（经 SW / 浏览器缓存），让「无感自动目录」尽量秒开；
-  // 省流量/慢网/显式关闭时自动跳过（见 modelCache.networkAllowsDownload）。
+  // 打开阅读页即请求预取本地语言的模型（由 Service Worker 在其上下文下载 + 持久缓存，
+  // 快进快出/整页导航都不会中断——不像主线程 fetch 一离开就 abort 重下）。省流量/慢网自动跳过。
   prefetchModelsForLangs([uiLang()]);
   // 翻页/重排后防抖保存阅读进度（进度恢复完成后才存，避免初始 page 0 覆盖）。
   createEffect(() => {
@@ -255,6 +248,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   const onRunEnhance = (): void => void runDetect();
   syncHook.tap(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
   onCleanup(() => {
+    clearTimeout(detectTimer); // 快进快出：离开时取消待触发的自动分析
     clearChapterEditContext(); // 清理目录编辑上下文，避免下一本书误用
     syncHook.off(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
     setChapterDetect({ status: 'idle', phase: 'download', progress: 0 }); // 复位共享状态

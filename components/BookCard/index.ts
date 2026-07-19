@@ -24,7 +24,7 @@ const clear = (): void => {
 
 /**
  * 精选编辑感封面色板：低饱和、深色调、白字可读——刻意避开满饱和随机 HSL（那是 AI slop）。
- * 每项为 [浅, 深] 两端，配合 CSS 里的顶部柔光 + 内描边书框，做出"精装书"质感。
+ * 每项为 [浅，深] 两端，配合 CSS 里的顶部柔光 + 内描边书框，做出"精装书"质感。
  */
 const COVER_PALETTE: ReadonlyArray<readonly [string, string]> = [
   ['#3d4c66', '#26324a'], // 靛蓝板岩
@@ -44,8 +44,8 @@ const paletteFromString = (str: string): readonly [string, string] => {
   return COVER_PALETTE[h % COVER_PALETTE.length];
 };
 
-/** 无封面书的生成式封面：精选双色 + 竖排书脊光泽 + typeset 标题/作者。 */
-const generatedCover = (title: string, author: string): ElementBuilder => {
+/** 无封面书的生成式封面：精选双色 + 竖排书脊光泽 + typeset 标题/作者（extra 挂进度条等叠加层）。 */
+const generatedCover = (title: string, author: string, extra?: ElementBuilder | null): ElementBuilder => {
   const [a, b] = paletteFromString(title || author || 'book');
   return Div()
     .class('wr-cover wr-cover-generated')
@@ -60,6 +60,7 @@ const generatedCover = (title: string, author: string): ElementBuilder => {
           Div().class('wr-cover-author').text(author),
         ),
       Div().class('wr-cover-shine'),
+      extra,
     );
 };
 
@@ -68,10 +69,20 @@ const generatedCover = (title: string, author: string): ElementBuilder => {
  * 点击清空阅读态并整页跳转书详情，支持时用 View Transition 做 `book-info-${id}` 共享元素 morph。
  * 传 `onDelete` 时右上角出现悬停显现的删除按钮（阻止冒泡，不触发导航）。
  */
-export const renderBookCard = (book: BookInfo, onDelete?: (id: string) => void): ElementBuilder => {
+export const renderBookCard = (
+  book: BookInfo,
+  onDelete?: (id: string) => void,
+  getPercent?: () => number,
+): ElementBuilder => {
   const { id, image, title = '', author = '' } = book || {};
   const ref = createRef<HTMLAnchorElement>();
   const href = `${ROUTE_PATH.BOOK_DETAIL}?id=${id}`;
+
+  // 封面底部阅读进度条（响应式宽度；进度异步加载后自动更新，未读时 0 宽不可见）。
+  const progressBar = (): ElementBuilder =>
+    Div()
+      .class('wr-cover-progress')
+      .style('width', () => `${Math.max(0, Math.min(100, getPercent?.() ?? 0))}%`);
 
   const onDeleteClick = (e: Event): void => {
     e.preventDefault();
@@ -100,8 +111,9 @@ export const renderBookCard = (book: BookInfo, onDelete?: (id: string) => void):
           View('img').class('wr-cover-img').attr('src', image).attr('alt', title),
           Div().class('wr-cover-spine'),
           Div().class('wr-cover-shine'),
+          progressBar(),
         )
-    : generatedCover(title, author);
+    : generatedCover(title, author, progressBar());
 
   return View<HTMLAnchorElement>('a')
     .ref(ref)

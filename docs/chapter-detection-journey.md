@@ -375,8 +375,13 @@ epub 的目录是出版商/制作者手工确定的真实章节结构，和「�
 **新集成架构（`store/chapters.ts` + `pages/book-detail` + `lib/chapter/modelDetect.ts`）**：
 
 1. **纯模型出目录**：`detectChaptersWithModel` 去掉 `collectCandidates` union 与 `validateCandidates` 结构层——**逐行分类过阈值的行直接成章**（按位置排序、end 取下一标题起点）。规则模块文件（`candidates/validate/patterns`）保留但不再参与识别。
-2. **模型优先的解析**：`resolveBookChapters` 只做「缓存命中(model/manual/caption) → 显式 `<caption-title>` 标注 → 否则 `source:'pending'` 空章节（整本一章，不写缓存）」，**不再跑规则**。旧 `source:'rules'` 缓存在 `getCachedChapters` 里视为未命中（迁移重识别）。
-3. **无感 UX**：① 打开任意页面即 `prefetchModelsForLangs([uiLang()])` 后台预取模型 → SW/浏览器缓存，下次秒用；② 开书缓存命中就秒出目录，否则**整本一章立即可读** + **目录模块内**显 loading（`chapterDetect` 共享 store：下载% → 识别%），模型推理在 nlp worker 不冻结 reader；③ 识别完 → 目录填充 + reader 重排 + 缓存 `source:'model'`，重开不再跑；④ 省流量/慢网退成目录里的「识别章节」手动按钮。
+2. **模型优先的解析**：`resolveBookChapters` 只做「缓存命中(任何来源) → 显式 `<caption-title>` 标注 → 否则 `source:'pending'` 空章节（整本一章，不写缓存）」，**不再跑规则**。
+   - **缓存迁移的坑（复盘）**：最初把旧 `source:'rules'` 缓存判失效想强制重识别，结果对已被规则**完美**识别的结构化大书（《三国》第X回、120 章高置信）也**强下 103MB 中文模型重跑**，开书卡顿数秒、还可能不如规则。**改回：任何已缓存结果直接复用**（`getCachedChapters` 不再拒 'rules'），纯模型只作用于**无缓存的新书**；已缓存旧书要重识别就清其章节缓存。**教训**：迁移「作废旧结果」时要算清代价——对已经好的结果强制重算，是净负收益（尤其重算很贵时）。
+3. **无感 UX（几轮迭代后的定版）**：
+   - **预取由 Service Worker 承接**：打开任意页面 `prefetchModelsForLangs([uiLang()])` → 消息发给 SW，**SW 在自己上下文里 fetch + 存持久 `MODEL_CACHE`**（`sw.js` 的 `precache-models` 消息 + `waitUntil` 保活）。关键：下载不随页面导航/快进快出中断——不像主线程 fetch 一离开就 abort、下次从头重下（无 SW 时回退主线程 prefetch）。
+   - **停留才自动分析（快进快出零浪费）**：开书无缓存时先出「整本一章」立即可读，**停在书上 ~700ms（`detectTimer`）才自动跑模型分析**；用户 700ms 内退出（快进快出）就 `clearTimeout` 取消，不启动模型实例。避免「点一本退一本」反复启停模型的浪费。
+   - **目录内 loading + 友好文案**：分析中目录显「**分析章节中** X%」（`chapterDetect` 共享 store），不暴露"下载模型/推理/100MB"等专业词；模型推理在 nlp worker，不冻结 reader。识别完 → 目录填充 + reader 重排 + 缓存 `source:'model'`。
+   - **缓存即用、不强制重跑**：任何已缓存结果（含旧规则）直接秒出（见上「缓存迁移的坑」）；旧规则/caption 缓存给目录里的手动「分析章节」按钮，供想升级到模型时点。
 4. **权衡（诚实记录）**：去掉 `validate.ts` 后，模型的假阳性/离群标题会**直接进目录**（不再被结构层的家族竞争/间距/覆盖度过滤）。用户接受——靠 per-language 模型自身较高的精度 + 目录手动编辑兜底。实测 Walden：带 validate 时结构层把模型候选滤成 0 章；纯模型直出「1854 / WALDEN / ECONOMY / SOLITUDE」。这也印证经验 11 的另一面——**结构层既能清噪声，也会误杀模型的真召回**；产品取向要「宁多勿漏、由用户删」时，去掉它是对的。
 
 > **经验 20**：**「模型 + 确定性后处理」的分工不是唯一解，取决于产品对假阳性/漏检的偏好**。§7/11 论证过「模型冲召回、结构层保精度」在追求高精度目录时最优；但当产品要「无感、宁多勿漏、错了用户删」，直接用模型原始召回、砍掉结构层反而更契合——同一套模型，集成策略随产品目标翻转。别把某一层的存在当永久前提。

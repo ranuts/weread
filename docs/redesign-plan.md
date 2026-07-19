@@ -64,7 +64,7 @@
 
 ### 4. 章节识别改「纯模型 + 无感自动」（✅ 已交付，见 chapter-detection-journey §12）
 - **要求**：弃规则匹配（打地鼠、54% 覆盖，见 journey §3）；只用模型，且对用户无感——页面加载即后台预取模型 + SW 缓存，没好就目录显 loading。
-- **做法**：`detectChaptersWithModel` 去 union+validate（逐行过阈值直接成章）；`resolveBookChapters` 缓存/caption/pending 三态、不跑规则；reader model-first（pending → 模型识别，整本一章可读 + 目录 loading）；打开页面即 `prefetchModelsForLangs([uiLang()])`；旧 `source:'rules'` 缓存迁移重识别。**权衡**：去 validate 后模型假阳性直进目录（用户接受，靠 per-lang 模型精度 + 手动编辑兜底）。
+- **做法**：`detectChaptersWithModel` 去 union+validate（逐行过阈值直接成章）；`resolveBookChapters` 缓存/caption/pending 三态、不跑规则；reader model-first（pending → 模型识别，整本一章可读 + 目录 loading）；打开页面即 `prefetchModelsForLangs([uiLang()])`；**任何已缓存结果直接复用**（不迁移丢弃——否则结构化大书会强下 103MB 重跑、卡顿），纯模型只作用于无缓存新书。**权衡**：去 validate 后模型假阳性直进目录（用户接受，靠 per-lang 模型精度 + 手动编辑兜底）。
 - **验证**：清缓存开 Walden → 整本一章立即可读 → 目录「Detecting」→ 模型出「1854/WALDEN/ECONOMY/SOLITUDE」、reader 重排、当前章高亮、缓存 model 重开不跑。
 
 ---

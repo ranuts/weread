@@ -1,6 +1,7 @@
 import CryptoJS from 'crypto-js';
 import { db } from '@/store/index';
 import { deleteChapters } from '@/store/chapters';
+import { deleteProgress } from '@/store/progress';
 import type { IDBResult } from '@/lib/indexedDB';
 
 export interface BookInfo {
@@ -148,11 +149,12 @@ export const getBookById = <T = unknown>(id: string): Promise<IDBResult<T>> => {
 };
 
 /**
- * 删除一本书：书本体（books_info）+ 它的章节缓存（books_chapters）一并清掉。
+ * 删除一本书：书本体（books_info）+ 章节缓存（books_chapters）+ 阅读进度（books_progress）一并清掉。
  * 走主线程 db.delete（与 deleteChapters 同路径；dbWorker 未实现 delete，IndexedDB 连接共享，
  * worker 下次 getAll 读到的是已提交的删除后状态）。
  */
 export const deleteBook = async (id: string): Promise<void> => {
   await db.delete({ storeName: STORE_NAME_BOOKS_INFO_KEY, key: id });
   await deleteChapters(id);
+  await deleteProgress(id);
 };

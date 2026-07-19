@@ -72,6 +72,17 @@
   pointer-events: none;
   background: linear-gradient(125deg, rgba(255, 255, 255, 0.14), transparent 46%);
 }
+/* 封面底部阅读进度：一道细条，宽度 = 已读百分比（未读 0 宽不可见），被封面圆角裁切。 */
+.wr-cover-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 3px;
+  background: var(--ran-color-link);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  transition: width var(--ran-motion-duration-base, 0.2s) var(--ran-motion-ease-smooth, ease);
+}
 /* 生成式封面（无图书）：精选编辑感双色（--cover-a/b 由 JS 按标题哈希注入）
    + 顶部柔光 + 内描边书框 + typeset 标题/作者。低饱和深色调，一眼"书"而非"AI 渐变"。 */
 .wr-cover-generated {
@@ -603,13 +614,28 @@
   font-variant-numeric: tabular-nums;
 }
 .wr-catalogue-detect-btn {
-  cursor: pointer;
-  color: var(--ran-color-link);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.85rem;
   font-weight: 500;
+  color: var(--ran-color-text);
+  background: var(--ran-color-bg-elevated);
+  border: 1px solid var(--ran-color-border);
+  border-radius: var(--ran-radius-full, 9999px);
+  cursor: pointer;
+  transition:
+    border-color var(--ran-motion-duration-base, 0.2s),
+    background var(--ran-motion-duration-base, 0.2s);
 }
 .wr-catalogue-detect-btn:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  border-color: var(--ran-color-border-hover);
+  background: var(--ran-color-bg-hover);
+}
+.wr-catalogue-detect-btn:focus-visible {
+  outline: 2px solid var(--ran-color-link);
+  outline-offset: 2px;
 }
 .wr-catalogue-list {
   flex: auto;

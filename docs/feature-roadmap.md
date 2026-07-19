@@ -9,7 +9,7 @@
 
 | # | 功能 | 优先级 | 状态 | 一句话 |
 |---|---|---|---|---|
-| 1 | **阅读进度持久化 + 续读** | P0 | 🚧 进行中 | 按 book id 存 `pageNum` 到 IndexedDB，开书恢复；书架显进度 |
+| 1 | **阅读进度持久化 + 续读** | P0 | ✅ 已交付 | 按 book id 存进度到 `books_progress`(DB v3)，开书续读；书架封面底部蓝色进度条 |
 | 2 | 阅读设置（字号/行距/边距/阅读主题/正文字体） | P0 | ⬜ | 读者停留最久处，现在完全不可调 |
 | 3 | 书签 / 划线 / 笔记 | P0 | ⬜ | 选中划线 + 想法 + 笔记面板 |
 | 4 | 元数据编辑 + 封面上传 | P1 | ⬜ | 改书名/作者、传自定义封面 |
@@ -22,10 +22,10 @@
 
 ## 明细
 
-### 1. 阅读进度持久化 + 续读（P0，本轮开工）
+### 1. 阅读进度持久化 + 续读（P0，✅ 已交付）
 - **痛点**：`pageNum` 是 `lib/subscribe.ts` 的内存信号，`BookCard.clear()` 进书前置 0 → 每次从头看，不续读。
-- **方案**：新建轻量 store `books_progress`（不塞进 `books_info`，避免每次翻页重写整本 content 大 blob），存 `{ id, page, totalPage, percent, updatedAt }`。开书 `paginateToTree` 出树后按 id 恢复上次页码（clamp 到 totalPage）；翻页时防抖写入。书架卡片显进度条/百分比（首页一次性 `getAllProgress`）。
-- **验证**：翻到中段离开重进，回到原页；书架卡片显进度。
+- **实现**：新建轻量 store `books_progress`（DB v2→v3；单独 store 避免翻页重写 `books_info` 的整本 content 大 blob），存 `{ id, page, totalPage, percent, updatedAt }`（`store/progress.ts`）。reader：`paginateToTree` 出树后 `getProgress` 恢复上次页码（`restorePage` 同分页精确、异分页按比例缩放 + 夹取）；`createEffect` 订阅 `pageNum`/`totalPage`、防抖 700ms `saveProgress`（`progressRestored` 门控，避免初始 0 覆盖）。书架：`getAllProgress` 一次性拉、`renderBookCard` 传响应式 `getPercent` getter → 封面底部蓝色进度条（`.wr-cover-progress`）。删书级联清进度（`deleteBook`）。
+- **已验证**：《三国》翻到第 6 页离开重进 → 回到第 7/1916 页；书架《三国》封面显 45% 蓝条，未读书无条。
 
 ### 2. 阅读设置（P0）
 - 字号 / 行距 / 边距 / 阅读主题（护眼 sepia、纯黑 OLED）/ 正文字体（衬线 ↔ 无衬线，现固定 `--wr-serif`）。设置存 localStorage，`--wr-*` / `--ran-*` 变量驱动，翻页/分页参数（`pagingTextCore` 的 fontSize/lineHeight）要随之联动重排。
