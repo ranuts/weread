@@ -16,7 +16,7 @@ import {
   makeNoteId,
   saveNote,
 } from '@/store/notes';
-import { buildPageOffsets, pageForOffset, segmentPage } from '@/lib/notes/anchor';
+import { buildPageOffsets, segmentPage } from '@/lib/notes/anchor';
 import { CLASSIFY_STATUS } from '@/lib/nlp/protocol';
 import { clearChapterEditContext, setChapterEditContext } from '@/lib/chapterEdit';
 import { transformTextToExpectedFormat } from '@/lib/transformText';
@@ -394,6 +394,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
         }
         setCurrentBookDetail(res.data);
         const { content, title } = res.data;
+        loadNotes(bookId); // 载入该书划线/笔记（正文高亮 + 笔记面板共享）
         // 章节优先走 IndexedDB 缓存，未命中则识别并写缓存
         resolveBookChapters(bookId, content).then((bookChapters) => {
           paginateToTree({ content, title, chapters: bookChapters.chapters });
@@ -442,6 +443,19 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
     tree().totalPage;
     if (progressRestored) savePos();
   });
+  // 翻页即关闭划线浮层（浮层锚在旧选区/高亮位置，翻页后已失效）。
+  createEffect(() => {
+    pageNum();
+    setTb(null);
+  });
+  // 点浮层/高亮之外的地方关闭浮层（浮层内 mousedown 已 preventDefault，不会触发）。
+  const onDocMouseDown = (e: MouseEvent): void => {
+    if (!tb()) return;
+    const target = e.target as HTMLElement;
+    if (target.closest?.('.wr-note-toolbar') || target.closest?.('[data-note-id]')) return;
+    setTb(null);
+  };
+  document.addEventListener('mousedown', onDocMouseDown);
   // 容器挂载 + 布局后：先落阅读设置（CSS 变量/主题），再跑分页（transformText 依赖真实 clientWidth/Height）
   if (id) requestAnimationFrame(() => {
     applyReaderChrome();
@@ -455,6 +469,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
   onCleanup(() => {
     clearTimeout(detectTimer); // 快进快出：离开时取消待触发的自动分析
     clearChapterEditContext(); // 清理目录编辑上下文，避免下一本书误用
+    document.removeEventListener('mousedown', onDocMouseDown);
+    setBookNotes([]); // 复位笔记，避免下一本书误用上一本的划线
     syncHook.off(EVENT_NAME.RUN_ENHANCE, onRunEnhance);
     syncHook.off(EVENT_NAME.SET_READING_SETTINGS, onSettingsChange);
     setChapterDetect({ status: 'idle', phase: 'download', progress: 0 }); // 复位共享状态
@@ -534,6 +550,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               ),
           ),
         renderBookDetailOperate(),
+        renderNoteToolbar(),
       );
   };
 
@@ -550,6 +567,8 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
       dist > 0 ? pre() : next();
     };
     const onClick = (e: MouseEvent): void => {
+      // 有选区（长按划线）时不翻页——交给 mouseup 弹划线浮层。
+      if (!window.getSelection()?.isCollapsed) return;
       const w = showContainerRef.current?.clientWidth || 0;
       if (!w) return;
       if (e.clientX < w / 4) {
@@ -588,8 +607,9 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               .ref(showContainerRef)
               .on('touchstart', onTouchStart)
               .on('touchend', onTouchEnd)
+              .on('mouseup', () => showContainerRef.current && onSelectEnd(showContainerRef.current, pageNum()))
               .on('click', onClick)
-              .text(() => tree().pageText[pageNum()]?.text ?? ''),
+              .children(segmentsIndex(() => pageNum())),
             Div()
               .class('wr-reader-chrome wr-reader-chrome-bottom')
               .style('height', barHeight)
@@ -598,6 +618,7 @@ export const renderBookDetail = (opts: PageOptions = {}): ElementBuilder => {
               .class('wr-reader-page-indicator')
               .text(() => `${pageNum() + 1} / ${tree().totalPage + 1}`),
           ),
+        renderNoteToolbar(),
       );
   };
 

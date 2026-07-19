@@ -56,5 +56,9 @@
   "theme_oled": "OLED",
   "font_serif": "Serif",
   "font_sans": "Sans",
-  "reset_settings": "Reset to defaults"
+  "reset_settings": "Reset to defaults",
+  "my_notes": "Highlights & notes",
+  "no_notes": "No highlights yet",
+  "delete_note": "Delete",
+  "note_thought_placeholder": "Add a thought…"
 }
