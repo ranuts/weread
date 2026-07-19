@@ -38,7 +38,13 @@ export const saveProgress = async (id: string, page: number, totalPage: number):
   try {
     await db.update({
       storeName: STORE_NAME_BOOKS_PROGRESS_KEY,
-      data: { id, page, totalPage, percent: toPercent(page, totalPage), updatedAt: Date.now() } satisfies ReadingProgress,
+      data: {
+        id,
+        page,
+        totalPage,
+        percent: toPercent(page, totalPage),
+        updatedAt: Date.now(),
+      } satisfies ReadingProgress,
     });
   } catch {
     // 忽略
@@ -72,6 +78,8 @@ export const deleteProgress = async (id: string): Promise<void> => {
 export const restorePage = (saved: ReadingProgress, currentTotalPage: number): number => {
   if (saved.page <= 0) return 0;
   const mapped =
-    saved.totalPage === currentTotalPage ? saved.page : Math.round((saved.page / (saved.totalPage || 1)) * currentTotalPage);
+    saved.totalPage === currentTotalPage
+      ? saved.page
+      : Math.round((saved.page / (saved.totalPage || 1)) * currentTotalPage);
   return Math.max(0, Math.min(mapped, currentTotalPage));
 };

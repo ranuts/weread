@@ -116,7 +116,16 @@ export const resolveBookChapters = async (
 
   // 交给模型识别：先出空章节（整本一章）让 reader 立即可读，不缓存。memo 供紧随的模型识别复用解码文本/语言。
   resolveMemo = { id, text, lang };
-  return { id, chapters: [], confidence: 'none', familyId: null, source: 'pending', lang, algoVersion: CHAPTER_ALGO_VERSION, modifyTime: Date.now() };
+  return {
+    id,
+    chapters: [],
+    confidence: 'none',
+    familyId: null,
+    source: 'pending',
+    lang,
+    algoVersion: CHAPTER_ALGO_VERSION,
+    modifyTime: Date.now(),
+  };
 };
 
 // 语言模型客户端单例：切换语言时才重建，避免重复下载
@@ -175,11 +184,7 @@ export const detectChaptersByModel = async (
  * 不再跑模型）——既是标注飞轮，也是模型差结果的终态纠正出口。
  * 章节变了，清掉 resolveMemo 以免后续误用旧文本。
  */
-export const saveManualChapters = async (
-  id: string,
-  chapters: DetectedChapter[],
-  lang?: BookLang,
-): Promise<void> => {
+export const saveManualChapters = async (id: string, chapters: DetectedChapter[], lang?: BookLang): Promise<void> => {
   resolveMemo = null;
   await saveChapters({ id, chapters, confidence: 'high', familyId: null, source: 'manual', lang });
 };
