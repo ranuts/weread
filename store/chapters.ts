@@ -51,10 +51,8 @@ export const getCachedChapters = async (id: string): Promise<BookChapters | null
     if (!record || !Array.isArray(record.chapters)) {
       return null;
     }
-    // 弃用规则识别后，旧的 source:'rules' 缓存视为未命中 → 重新用模型识别（迁移）。
-    if ((record.source as string) === 'rules') {
-      return null;
-    }
+    // 任何已缓存结果（含旧的 source:'rules'）都直接复用——秒出目录、不重下 103MB 模型、不卡顿。
+    // 纯模型只作用于「无缓存的新书」；已缓存旧书如需用模型重识别，清其章节缓存后重开即可。
     if (record.source !== 'manual' && record.algoVersion !== CHAPTER_ALGO_VERSION) {
       return null;
     }

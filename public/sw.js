@@ -103,3 +103,25 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(cacheFirst(request, ASSET_CACHE));
   }
 });
+
+// 页面发来「预取模型」消息 → SW 在自己的上下文里把模型文件抓进持久 MODEL_CACHE。
+// 关键：下载跑在 SW 里、用 waitUntil 保活，页面快进快出/整页导航都不会中断它——
+// 避免主线程 fetch 一离开就 abort、下次从头重下的浪费（章节分析首屏体验的核心）。
+self.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || data.type !== 'precache-models' || !Array.isArray(data.urls)) return;
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(MODEL_CACHE);
+      for (const url of data.urls) {
+        try {
+          if (await cache.match(url)) continue; // 已缓存跳过（幂等，重复消息无害）
+          const res = await fetch(url, { cache: 'force-cache' });
+          if (res.ok) await cache.put(url, res.clone());
+        } catch (error) {
+          console.log('service worker precache-models error:', url, error);
+        }
+      }
+    })(),
+  );
+});

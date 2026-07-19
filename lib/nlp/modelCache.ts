@@ -77,6 +77,22 @@ export const prefetchModel = async (modelId: string): Promise<void> => {
 };
 
 /**
+ * 请求 Service Worker 在其上下文里预取模型文件——下载不随页面导航/快进快出中断（SW 用 waitUntil 保活）。
+ * 成功交给 SW 返回 true；无可控 SW 时返回 false，调用方回退主线程 fetch。
+ */
+const precacheViaServiceWorker = (urls: string[]): boolean => {
+  try {
+    const ctrl =
+      typeof navigator !== 'undefined' && 'serviceWorker' in navigator ? navigator.serviceWorker.controller : null;
+    if (!ctrl) return false;
+    ctrl.postMessage({ type: 'precache-models', urls });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * 在浏览器空闲时预取指定语言的模型（去重、跳过无模型的语言）。
  * 受 networkAllowsDownload 约束。非阻塞：调用后立即返回。
  */
@@ -93,7 +109,9 @@ export const prefetchModelsForLangs = (langs: Iterable<BookLang>): void => {
     void (async (): Promise<void> => {
       for (const id of ids) {
         if (await isModelCached(id)) continue;
-        await prefetchModel(id);
+        // 优先让 SW 预取（导航安全、快进快出不中断）；无 SW 再退回主线程 fetch。
+        const urls = MODEL_FILES.map((file) => fileUrl(id, file));
+        if (!precacheViaServiceWorker(urls)) await prefetchModel(id);
       }
     })();
   };

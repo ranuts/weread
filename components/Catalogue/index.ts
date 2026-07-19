@@ -174,8 +174,8 @@ export const renderCatalogue = (): ElementBuilder => {
                 .class('wr-catalogue-detect-text')
                 .text(() => {
                   const d = detect();
-                  const label = d.phase === 'detect' ? t('modelEnhancing') : t('modelDownloading');
-                  return d.progress > 0 ? `${label} ${d.progress}%` : label;
+                  // 统一友好文案「分析章节中」，不暴露"下载模型/推理"等专业词；带进度百分比。
+                  return d.progress > 0 ? `${t('analyzingChapters')} ${d.progress}%` : t('analyzingChapters');
                 }),
             ),
       }),
