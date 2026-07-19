@@ -2,6 +2,7 @@ import jschardet from 'jschardet';
 import { Locales, t } from '@/locales';
 import { detectChapters } from '@/lib/chapter';
 import { buildTextSyntaxTree, pagingTextCore } from '@/lib/paging';
+import type { Typography } from '@/lib/paging';
 
 export interface TransformText {
   encoding: string;
@@ -167,12 +168,15 @@ export const transformTextToExpectedFormat = ({
   container,
   title,
   chapters,
+  typography,
 }: {
   content: ArrayBuffer | Uint8Array<ArrayBuffer>;
   container: HTMLElement;
   title: string;
   /** 预计算的章节（来自缓存或模型增强），传入时跳过内部识别；空数组表示已确认无章节 */
   chapters?: ChapterItem[];
+  /** 排版倍率（阅读设置：字号/行距）；省略即默认 1，与显示 CSS 同步。 */
+  typography?: Typography;
 }): TextSyntaxTree => {
   // 1. 过滤空格换行
   const text = arrayBufferToString(content).replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
@@ -193,5 +197,6 @@ export const transformTextToExpectedFormat = ({
     title,
     chapters: extractedChapters,
     prefaceLabel: t('preface'),
+    typography,
   });
 };

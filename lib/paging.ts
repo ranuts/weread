@@ -20,6 +20,18 @@ export interface PagingDims {
   clientHeight: number;
 }
 
+/**
+ * 排版倍率（阅读设置驱动）。相对基准（字号 18px / 行高 40px）缩放，默认 1 = 原始行为不变。
+ * **必须与显示 CSS 用同一套倍率**（`--wr-font-scale` / `--wr-line-scale`），否则分页与实际渲染错位。
+ * 行高同时乘 `fontScale`（字号变大行也变高，避免行重叠）与 `lineScale`（独立行距调节）。
+ */
+export interface Typography {
+  fontScale: number;
+  lineScale: number;
+}
+
+export const DEFAULT_TYPOGRAPHY: Typography = { fontScale: 1, lineScale: 1 };
+
 const CHAPTER_TITLE_START = '<caption-title>';
 const CHAPTER_TITLE_END = '</caption-title>';
 
@@ -54,18 +66,20 @@ const isWordCode = (code: number): boolean => code < 128 && WORD_PART[code] === 
  * 性能：热路径用 `charCodeAt` + 查表替正则；页文本用 `text.slice(pageStart, useChar)` 一次切出，
  * 不再逐字符 `+=` 拼超长字符串——大书（百万字）分页耗时数量级下降，行为逐字节不变。
  */
-export const pagingTextCore = (content: string, dims: PagingDims): PagingTextResult => {
+export const pagingTextCore = (content: string, dims: PagingDims, typography?: Typography): PagingTextResult => {
   const text = content.replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
   const total = text.length;
   const { clientWidth, clientHeight } = dims;
   if (clientHeight < 30 || clientWidth < 30) {
     return { program: [], ...EMPTY_RESULT, total };
   }
-  // 字体大小，字体行高，字体间距，字体宽度
+  // 排版倍率（阅读设置）：默认 1，与显示 CSS 的 --wr-font-scale/--wr-line-scale 保持一致。
+  const { fontScale, lineScale } = typography ?? DEFAULT_TYPOGRAPHY;
+  // 字体大小，字体行高，字体间距，字体宽度（基准值 × 倍率；scale=1 时与原始常量逐位相同）
   const rootFontSize = 16;
-  const fontSize = 1.125 * rootFontSize; // 字体大小 text-lg
-  const lineHeight = 0.25 * 10 * rootFontSize; // 行高（倍数）leading-10
-  const letterSpacing = 0.025 * rootFontSize; // 字符间距（em）tracking-wide
+  const fontSize = 1.125 * rootFontSize * fontScale; // 字体大小 text-lg
+  const lineHeight = 0.25 * 10 * rootFontSize * fontScale * lineScale; // 行高：随字号 + 独立行距倍率
+  const letterSpacing = 0.025 * rootFontSize * fontScale; // 字符间距（em）tracking-wide
   const charWidth = fontSize + letterSpacing; // 每个字符的宽度（px）
   const charsPerLine = Math.floor(clientWidth / charWidth); // 每行能容纳的字符数
   const totalLine = Math.floor(clientHeight / lineHeight); // 总行数
@@ -204,12 +218,15 @@ export const buildTextSyntaxTree = ({
   title,
   chapters,
   prefaceLabel,
+  typography,
 }: {
   text: string;
   dims: PagingDims;
   title: string;
   chapters: ChapterItem[];
   prefaceLabel: string;
+  /** 排版倍率（阅读设置）；省略即默认 1。逐段分页时透传给 pagingTextCore。 */
+  typography?: Typography;
 }): TextSyntaxTree => {
   const text = rawText.replace(/(?:\r\n|\r|\n)+/g, '\n') || '';
 
@@ -232,7 +249,11 @@ export const buildTextSyntaxTree = ({
 
   const sequences: Sequence[] = [];
   sections.forEach((item, index) => {
-    const result = pagingTextCore(item.section.replace(CHAPTER_TITLE_START, '').replace(CHAPTER_TITLE_END, ''), dims);
+    const result = pagingTextCore(
+      item.section.replace(CHAPTER_TITLE_START, '').replace(CHAPTER_TITLE_END, ''),
+      dims,
+      typography,
+    );
     sequences.push({ title: item.title, result, titleId: index });
   });
 
