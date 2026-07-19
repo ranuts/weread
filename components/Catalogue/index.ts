@@ -179,6 +179,7 @@ export const renderCatalogue = (): ElementBuilder => {
                 }),
             ),
       }),
+      // 常驻手动入口：有模型即显示。已有多章 → 「重新生成目录」；仅整本一章 → 「分析章节」。随时可重跑。
       Show({
         when: () => detect().status === 'available',
         children: () =>
@@ -188,7 +189,7 @@ export const renderCatalogue = (): ElementBuilder => {
               View('a')
                 .class('wr-catalogue-detect-btn')
                 .attr('title', t('enhanceHint'))
-                .text(t('enhanceCatalogue'))
+                .text(() => ((tree().titleIdTitle?.length ?? 0) > 1 ? t('regenerateCatalogue') : t('enhanceCatalogue')))
                 .on('click', () => syncHook.call(EVENT_NAME.RUN_ENHANCE)),
             ),
       }),
