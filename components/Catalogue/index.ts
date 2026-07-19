@@ -139,8 +139,12 @@ export const renderCatalogue = (): ElementBuilder => {
             .attr('src', () => bookDetail().image ?? '')
             .style('display', () => (bookDetail().image ? '' : 'none')),
           Div().children(
-            Div().class('wr-catalogue-title').text(() => bookDetail().title ?? ''),
-            Div().class('wr-catalogue-author').text(() => bookDetail().author ?? ''),
+            Div()
+              .class('wr-catalogue-title')
+              .text(() => bookDetail().title ?? ''),
+            Div()
+              .class('wr-catalogue-author')
+              .text(() => bookDetail().author ?? ''),
           ),
         ),
       // 工具行（单行）：左＝章节识别状态/按钮（idle 时为空），右＝编辑 + 排序图标。
@@ -177,7 +181,9 @@ export const renderCatalogue = (): ElementBuilder => {
                   View('a')
                     .class('wr-catalogue-detect-btn')
                     .attr('title', t('enhanceHint'))
-                    .text(() => ((tree().titleIdTitle?.length ?? 0) > 1 ? t('regenerateCatalogue') : t('enhanceCatalogue')))
+                    .text(() =>
+                      (tree().titleIdTitle?.length ?? 0) > 1 ? t('regenerateCatalogue') : t('enhanceCatalogue'),
+                    )
                     .on('click', () => syncHook.call(EVENT_NAME.RUN_ENHANCE)),
               }),
             ),

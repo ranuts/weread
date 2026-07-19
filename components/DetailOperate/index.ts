@@ -13,19 +13,21 @@ const NOTES_ICON_FONT_SIZE = '20px';
 const menuTrigger = (): ElementBuilder =>
   Div()
     .class('wr-operate-trigger')
-    .children(View('r-icon').class('hover-icon').attr('name', 'menu').cssVar('--ran-icon-font-size', MENU_ICON_FONT_SIZE));
+    .children(
+      View('r-icon').class('hover-icon').attr('name', 'menu').cssVar('--ran-icon-font-size', MENU_ICON_FONT_SIZE),
+    );
 
 /** 阅读设置触发器（圆形按钮 + 「Aa」字样，Kindle 式排版入口）。 */
 const settingsTrigger = (): ElementBuilder =>
-  Div()
-    .class('wr-operate-trigger')
-    .children(Span().class('wr-operate-aa').text('Aa'));
+  Div().class('wr-operate-trigger').children(Span().class('wr-operate-aa').text('Aa'));
 
 /** 笔记触发器（圆形按钮 + book 图标）。 */
 const notesTrigger = (): ElementBuilder =>
   Div()
     .class('wr-operate-trigger')
-    .children(View('r-icon').class('hover-icon').attr('name', 'book').cssVar('--ran-icon-font-size', NOTES_ICON_FONT_SIZE));
+    .children(
+      View('r-icon').class('hover-icon').attr('name', 'book').cssVar('--ran-icon-font-size', NOTES_ICON_FONT_SIZE),
+    );
 
 /** 桌面端：右上角浮动操作簇（目录 + 排版设置 + 笔记），点击左向弹出对应浮层。
  * 目录放第一个（最靠上）——其浮层向下展开，锚在顶部时纵向空间最大。 */
@@ -34,7 +36,12 @@ export const renderBookDetailOperate = (): ElementBuilder =>
     .class('wr-operate')
     .children(
       renderPopover({ placement: 'left', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
-      renderPopover({ placement: 'left', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
+      renderPopover({
+        placement: 'left',
+        trigger: 'click',
+        overlay: renderReadingSettings(),
+        children: settingsTrigger(),
+      }),
       renderPopover({ placement: 'left', trigger: 'click', overlay: renderNotesPanel(), children: notesTrigger() }),
     );
 
@@ -44,6 +51,11 @@ export const renderMobileBookDetailOperate = (): ElementBuilder =>
     .class('wr-operate-mobile')
     .children(
       renderPopover({ placement: 'top', trigger: 'click', overlay: renderBookDetailMenu(), children: menuTrigger() }),
-      renderPopover({ placement: 'top', trigger: 'click', overlay: renderReadingSettings(), children: settingsTrigger() }),
+      renderPopover({
+        placement: 'top',
+        trigger: 'click',
+        overlay: renderReadingSettings(),
+        children: settingsTrigger(),
+      }),
       renderPopover({ placement: 'top', trigger: 'click', overlay: renderNotesPanel(), children: notesTrigger() }),
     );

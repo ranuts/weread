@@ -6,7 +6,7 @@ import en from './en.json';
 export enum Locales {
   'zh-CN' = 'zh-CN',
   'zh-HK' = 'zh-HK',
-  'en' = 'en',
+  en = 'en',
 }
 
 export const resources: Record<string, { translation: Record<string, string> }> = {

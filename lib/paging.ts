@@ -53,7 +53,7 @@ const EMPTY_RESULT: Omit<PagingTextResult, 'program'> = {
  */
 const WORD_PART = (() => {
   const table = new Uint8Array(128);
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.,!?;:'\"()[]{}";
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.,!?;:\'"()[]{}';
   for (let i = 0; i < chars.length; i++) table[chars.charCodeAt(i)] = 1;
   return table;
 })();

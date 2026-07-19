@@ -25,15 +25,15 @@ weread 是隐私优先的纯前端阅读器（原 React 19 + Vite + Tailwind + P
 
 ## 进度总览
 
-| 阶段 | 内容 | 状态 |
-|---|---|---|
-| Phase 0 | SSR 冒烟：验证 builder→DSD 往返 | ✅ 完成 |
-| Phase 1 | 基建 + 入口骨架 + Loading 打通 | ✅ 完成（已浏览器验证；`pnpm test` 待补） |
-| Phase 2 | 叶子组件（Popover/BookCard/Catalogue/DetailMenu/DetailOperate） | ✅ 完成（build 证毕；Catalogue/DetailMenu 已随 home 浏览器验证） |
-| Phase 3 | home 页重设计 + 响应式合并 | ✅ 完成（已浏览器验证：书架/搜索/主题/导航） |
-| Phase 4 | book-detail 页（含 AI 增强） | ✅ 完成（全流程浏览器验证：加载/翻页/目录/搜索/返回 + **AI 增强实测**：链接→检测→下载%→推理→重置） |
-| Phase 5 | 清理依赖/死代码，终版 build + 走查 | ✅ 完成（死依赖 Phase 1 已清；孤儿 scss 删除；alpha.4 升级 + 回退临时 workaround；终版 build 全绿） |
-| Phase 6 | 视觉再设计（脱离「太普通」）| ✅ 完成（生成式书封 + 品牌字标 + 纸面阅读器；明/暗双主题浏览器走查；client+server build 全绿） |
+| 阶段    | 内容                                                            | 状态                                                                                                |
+| ------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Phase 0 | SSR 冒烟：验证 builder→DSD 往返                                 | ✅ 完成                                                                                             |
+| Phase 1 | 基建 + 入口骨架 + Loading 打通                                  | ✅ 完成（已浏览器验证；`pnpm test` 待补）                                                           |
+| Phase 2 | 叶子组件（Popover/BookCard/Catalogue/DetailMenu/DetailOperate） | ✅ 完成（build 证毕；Catalogue/DetailMenu 已随 home 浏览器验证）                                    |
+| Phase 3 | home 页重设计 + 响应式合并                                      | ✅ 完成（已浏览器验证：书架/搜索/主题/导航）                                                        |
+| Phase 4 | book-detail 页（含 AI 增强）                                    | ✅ 完成（全流程浏览器验证：加载/翻页/目录/搜索/返回 + **AI 增强实测**：链接→检测→下载%→推理→重置）  |
+| Phase 5 | 清理依赖/死代码，终版 build + 走查                              | ✅ 完成（死依赖 Phase 1 已清；孤儿 scss 删除；alpha.4 升级 + 回退临时 workaround；终版 build 全绿） |
+| Phase 6 | 视觉再设计（脱离「太普通」）                                    | ✅ 完成（生成式书封 + 品牌字标 + 纸面阅读器；明/暗双主题浏览器走查；client+server build 全绿）      |
 
 ## Phase 0 — SSR 可行性 ✅
 

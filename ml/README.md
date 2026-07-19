@@ -55,12 +55,12 @@ npx tsx evalRules.ts /path/to/corpus
 
 ## 目录
 
-| 路径 | 说明 | 运行环境 |
-|------|------|----------|
-| `data/build_dataset.py` | epub → 行级标签 JSONL | 本机（标准库） |
-| `train/train.py` | mDeBERTa 逐行分类微调 | **GPU 机器** |
-| `export/export_onnx.py` | ONNX 导出 + int8 量化 | 装 optimum 的机器 |
-| `eval/evalRules.ts` | 规则层语料评估（对照基线） | 本机（tsx） |
+| 路径                    | 说明                       | 运行环境          |
+| ----------------------- | -------------------------- | ----------------- |
+| `data/build_dataset.py` | epub → 行级标签 JSONL      | 本机（标准库）    |
+| `train/train.py`        | mDeBERTa 逐行分类微调      | **GPU 机器**      |
+| `export/export_onnx.py` | ONNX 导出 + int8 量化      | 装 optimum 的机器 |
+| `eval/evalRules.ts`     | 规则层语料评估（对照基线） | 本机（tsx）       |
 
 ## 已知待办
 
