@@ -19,7 +19,7 @@ env.useBrowserCache = true;
 // 会把 http(s):// 开头的 localModelPath 当成远端而跳过本地文件检查（配合 allowRemoteModels=false
 // 就判成文件不存在）。用 pathname（/weread/models/）让本地分支生效。worker 在 /weread/workers/，故上一级。
 env.localModelPath = new URL('../models/', self.location.href).pathname;
-env.backends.onnx.wasm.numThreads = 1;
+if (env.backends.onnx.wasm) env.backends.onnx.wasm.numThreads = 1;
 
 // 用 AutoTokenizer + AutoModel 分开加载：pipeline 抽象在 DeBERTa-v2 tokenizer 上会
 // 报「this.tokenizer is not a function」，手动 tokenize + 推理更稳

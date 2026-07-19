@@ -1319,7 +1319,10 @@
 /* 桌面：双列 */
 .wr-reader-desktop {
   position: relative;
-  padding: 0 clamp(1.5rem, 6vw, 8rem);
+  box-sizing: border-box;
+  /* 顶部/底部叠加设备安全区（刘海 / 底部指示条）——env() 需 index.html 的 viewport-fit=cover 生效。
+     border-box + 100vh，故 padding 吃进 100vh 内，内层 height:100% 不溢出。 */
+  padding: env(safe-area-inset-top) clamp(1.5rem, 6vw, 8rem) env(safe-area-inset-bottom);
 }
 .wr-reader-inner {
   display: flex;
@@ -1411,8 +1414,9 @@
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  /* 底部留出与顶栏相称的呼吸空间，避免卡片下缘贴住视口底（原 0.5rem≈8px 太贴边）。 */
-  margin-bottom: 1.75rem;
+  /* 底部留出与顶栏相称的呼吸空间，避免卡片下缘贴住视口底（原 0.5rem≈8px 太贴边）。
+     叠加在 .wr-reader-desktop 的 safe-area-inset-bottom 之上。 */
+  margin-bottom: 2.25rem;
   /* 左右内边距随阅读设置「页边距」档位缩放（--wr-margin-scale：窄 0.5 / 标准 1 / 宽 1.6）。
      容器 clientWidth 随之变化，分页核心读取后自动重算每行字数。上下内边距也放大一点，
      让正文不贴卡片上下缘（底部 1.25rem 给正文与翻页栏之间留气口）。 */
@@ -1506,7 +1510,10 @@
 .wr-reader-mobile-inner {
   position: relative;
   height: 100%;
-  padding: 2rem calc(1.75rem * var(--wr-margin-scale, 1));
+  box-sizing: border-box;
+  /* 上下叠加设备安全区（刘海 / 底部指示条），正文不被遮挡。 */
+  padding: calc(2rem + env(safe-area-inset-top)) calc(1.75rem * var(--wr-margin-scale, 1))
+    calc(2rem + env(safe-area-inset-bottom));
 }
 .wr-reader-chrome {
   position: absolute;
@@ -1516,6 +1523,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  height: 0; /* 收起态：class 切换驱动（见 .is-open） */
   padding: 0 1rem;
   overflow: hidden;
   background: var(--ran-color-bg-elevated);
@@ -1528,6 +1536,16 @@
 }
 .wr-reader-chrome-bottom {
   bottom: 0;
+}
+/* 展开态：高度 = 3.5rem 内容 + 设备安全区；同侧 padding 把内容推到刘海/指示条之外。
+   收起时 height:0 无 padding → 不残留安全区留白。 */
+.wr-reader-chrome-top.is-open {
+  height: calc(3.5rem + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}
+.wr-reader-chrome-bottom.is-open {
+  height: calc(3.5rem + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
 }
 .wr-reader-mobile-text {
   width: 100%;
@@ -1543,7 +1561,7 @@
 .wr-reader-page-indicator {
   position: absolute;
   right: 1.75rem;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
   z-index: 10;
   padding: 0.2rem 0.7rem;
   font-size: 0.8rem;

@@ -32,7 +32,7 @@ export interface ChapterDetectState {
 
 export const syncHook = subscribers;
 
-export const [getCurrentBookDetail, setCurrentBookDetail] = createSignal<BookInfo>(
+export const [getCurrentBookDetail, setCurrentBookDetail] = createSignal<Partial<BookInfo>>(
   {},
   { subscriber: EVENT_NAME.SET_CURRENT_BOOK_DETAIL },
 );

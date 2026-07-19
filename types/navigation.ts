@@ -1,11 +1,7 @@
 // Navigation API 类型声明
 // 参考：https://developer.mozilla.org/en-US/docs/Web/API/Navigation
-
-declare global {
-  interface Window {
-    readonly navigation: Navigation;
-  }
-}
+// 注：TS7 的 lib.dom.d.ts 已内置 Window.navigation: Navigation，此处不再重复声明，
+// 否则会与内置类型冲突（TS2717）。本文件保留下方各接口供 lib/navigation.ts 引用。
 
 export interface NavigationEventMap {
   navigate: NavigateEvent;
