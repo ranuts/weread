@@ -37,7 +37,7 @@ const INPUT_CSS_VARS: Record<string, string> = {
   '--ran-icon-margin': '4px 0px 0px 16px',
 };
 
-const PLUS_ICON_FONT_SIZE = '56px';
+const PLUS_ICON_FONT_SIZE = '34px';
 const EMPTY_ICON_FONT_SIZE = '96px';
 
 /** 选文件 → 读取 → checkEncoding → addBook。契约同原实现。 */
@@ -190,8 +190,23 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
   return Div()
     .class('wr-home')
     .children(
-      // 顶栏：主题切换（ranui alpha.4 起 r-theme-switch SSR-safe）
-      Div().class('wr-home-topbar').children(View('r-theme-switch')),
+      // 顶栏：品牌字标 + 主题切换（ranui alpha.4 起 r-theme-switch SSR-safe）
+      Div()
+        .class('wr-home-header')
+        .children(
+          Div()
+            .class('wr-home-brand')
+            .children(
+              Div().class('wr-home-logo').text('W'),
+              Div()
+                .class('wr-home-wordmark')
+                .children(
+                  Div().class('wr-home-name').text('weread'),
+                  Div().class('wr-home-tagline').text(t('tagline')),
+                ),
+            ),
+          View('r-theme-switch'),
+        ),
       // 搜索区
       Div()
         .class('wr-home-search')
@@ -272,15 +287,30 @@ export const renderHome = (opts: PageOptions = {}): ElementBuilder => {
           Div()
             .class('wr-home-shelf')
             .children(
-              Div().class('wr-home-shelf-title').text(t('my_bookcase')),
+              Div()
+                .class('wr-home-shelf-head')
+                .children(
+                  Div().class('wr-home-shelf-title').text(t('my_bookcase')),
+                  Span()
+                    .class('wr-home-shelf-count')
+                    .text(() => t('library_count', [bookList().length])),
+                ),
               Div()
                 .class('wr-home-grid')
                 .children(
-                  // "+" 导入卡
+                  // "+" 导入卡（虚线幽灵封面，尺寸与书封一致）
                   Div()
                     .class('wr-home-add')
+                    .attr('title', t('add_book'))
                     .on('click', add)
-                    .children(View('r-icon').attr('name', 'plus').cssVar('--ran-icon-font-size', PLUS_ICON_FONT_SIZE)),
+                    .children(
+                      Div()
+                        .class('wr-home-add-inner')
+                        .children(
+                          View('r-icon').attr('name', 'plus').cssVar('--ran-icon-font-size', PLUS_ICON_FONT_SIZE),
+                          Div().class('wr-home-add-label').text(t('add_book')),
+                        ),
+                    ),
                   // 书架栅格：For 按 book.id keyed 复用卡片
                   For({ each: () => bookList(), key: (b) => b.id, render: (b) => renderBookCard(b) }),
                 ),

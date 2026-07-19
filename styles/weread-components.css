@@ -1,5 +1,17 @@
-/* Phase 2 叶子组件样式（Geist token）。集中于此、由 base.css @import，
+/* weread 视觉层（Geist token）。集中于此、由 base.css @import，
    使组件 .ts 保持纯逻辑（SSR / esbuild 安全，不内联 scss）。 */
+
+/* ── 局部设计原语 ─────────────────────────────────────────────────────────── */
+:root {
+  --wr-cover-aspect: 3 / 4.35;
+  --wr-cover-radius: 10px;
+  --wr-ease-spring: var(--ran-motion-ease-spring, cubic-bezier(0.34, 1.26, 0.5, 1));
+  --wr-content-width: 72rem;
+  /* 阅读/封面用的文学衬线栈（Latin + CJK 都覆盖），给"书"的质感。 */
+  --wr-serif:
+    'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Songti SC', 'STSong',
+    'Noto Serif SC', 'Source Han Serif SC', serif;
+}
 
 /* 图标悬停：默认次要色，hover 提亮到主文本色。 */
 .hover-icon {
@@ -11,209 +23,213 @@
   --ran-icon-color: var(--ran-color-text);
 }
 
-/* ---------- BookCard ---------- */
-.wr-book-card {
+/* ── 封面系统（书架卡片 + 详情共用）────────────────────────────────────────── */
+.wr-cover {
+  position: relative;
+  aspect-ratio: var(--wr-cover-aspect);
+  border-radius: var(--wr-cover-radius);
+  overflow: hidden;
+  background: var(--ran-color-bg-muted);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.14),
+    0 10px 22px -12px rgba(0, 0, 0, 0.4);
+  transition:
+    transform var(--ran-motion-duration-slow, 0.35s) var(--wr-ease-spring),
+    box-shadow var(--ran-motion-duration-slow, 0.35s) ease;
+  will-change: transform;
+}
+.wr-cover-img {
   display: block;
-  cursor: pointer;
-  text-decoration: none;
-  transition: transform var(--ran-motion-duration-base, 0.2s);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
-.wr-book-card:hover {
-  transform: scale(1.05);
+/* 书脊：左缘的深色渐变 + 一道高光，制造装订立体感。 */
+.wr-cover-spine {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 12px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.32),
+    rgba(0, 0, 0, 0.06) 55%,
+    transparent
+  );
 }
-.wr-book-card-inner {
+.wr-cover-spine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+/* 斜向光泽（收敛，避免像塑料反光） */
+.wr-cover-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.14), transparent 46%);
+}
+/* 生成式封面（无图书）：精选编辑感双色（--cover-a/b 由 JS 按标题哈希注入）
+   + 顶部柔光 + 内描边书框 + typeset 标题/作者。低饱和深色调，一眼"书"而非"AI 渐变"。 */
+.wr-cover-generated {
   display: flex;
   align-items: center;
-  gap: var(--ran-space-4, 1rem);
-  padding: var(--ran-space-4, 1rem);
-  height: 100%;
+  justify-content: center;
+  background:
+    radial-gradient(115% 80% at 26% -8%, rgba(255, 255, 255, 0.16), transparent 55%),
+    linear-gradient(158deg, var(--cover-a, #3b4a63), var(--cover-b, #26324a));
 }
-.wr-book-card-cover {
-  flex: none;
-  height: 6rem;
-  object-fit: cover;
-  border-radius: var(--ran-radius-sm, 4px);
+/* 内描边书框（避开书脊），像真实精装封面的压印边线 */
+.wr-cover-generated::before {
+  content: '';
+  position: absolute;
+  inset: 11px 11px 11px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+  pointer-events: none;
+  z-index: 1;
+}
+.wr-cover-plate {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 1.6rem 1.25rem;
+  padding-left: 1.6rem; /* 让开书脊 */
+  text-align: center;
+  color: rgba(255, 255, 255, 0.96);
+}
+.wr-cover-title {
+  font-family: var(--wr-serif);
+  font-size: 1.06rem;
+  font-weight: 600;
+  line-height: 1.34;
+  letter-spacing: 0.002em;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wr-cover-rule {
+  width: 1.6rem;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.wr-cover-author {
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── BookCard（书架格）─────────────────────────────────────────────────────── */
+.wr-book-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wr-book-card:hover .wr-cover {
+  transform: translateY(-8px) scale(1.015);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.12),
+    0 22px 40px -16px rgba(0, 0, 0, 0.5);
 }
 .wr-book-card-meta {
-  flex: 1 1 0;
-  min-width: 0;
+  padding: 0 0.15rem;
 }
 .wr-book-card-title {
+  font-size: 0.9rem;
+  font-weight: 550;
   color: var(--ran-color-text);
-  font-weight: 500;
 }
 .wr-book-card-author {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
   color: var(--ran-color-text-secondary);
 }
 
-/* 响应式：窄屏收窄卡片、隐藏封面（Phase 3 合并 desktop/mobile 的落点）。 */
-@media (max-width: 768px) {
-  .wr-book-card-cover {
-    display: none;
-  }
-}
-
-/* ---------- Catalogue ---------- */
-.wr-catalogue {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-.wr-catalogue-header {
-  display: flex;
-  align-items: center;
-  flex: none;
-  gap: var(--ran-space-4, 1rem);
-  padding: 0.5rem 1.75rem;
-}
-.wr-catalogue-cover {
-  width: 3.5rem;
-  border-radius: var(--ran-radius-sm, 4px);
-}
-.wr-catalogue-title {
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: var(--ran-color-text);
-  word-break: break-all;
-}
-.wr-catalogue-author {
-  margin-top: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--ran-color-text-secondary);
-  word-break: break-all;
-}
-.wr-catalogue-sort {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: none;
-  padding: 0 2.25rem;
-  height: 2.5rem;
-}
-.wr-catalogue-sort-icon {
-  transition: transform var(--ran-motion-duration-base, 0.2s);
-}
-.wr-catalogue-sort-icon.UP {
-  transform: rotate(180deg);
-}
-.wr-catalogue-list {
-  flex: auto;
-  overflow-y: auto;
-}
-.wr-catalogue-item {
-  padding: 0 1.75rem;
-  height: 3rem;
-  font-size: 1rem;
-  color: var(--ran-color-text-secondary);
-  cursor: pointer;
-}
-.wr-catalogue-item:hover {
-  background: var(--ran-color-bg-hover);
-}
-.wr-catalogue-item-inner {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  border-top: 1px solid var(--ran-color-border);
-}
-
-/* ---------- DetailMenu ---------- */
-.wr-menu {
-  display: flex;
-  flex-direction: column;
-  width: 28rem;
-  max-width: 90vw;
-  height: calc(100vh - 8rem);
-}
-.wr-menu-search {
-  flex: none;
-  padding: 1.75rem 1.5rem;
-}
-.wr-menu-result {
-  flex: auto;
-  overflow-y: auto;
-  padding-bottom: 1.75rem;
-}
-.wr-menu-result-title {
-  padding: 0.5rem 1.5rem;
-  font-size: 1rem;
-  color: var(--ran-color-text);
-}
-.wr-menu-result-line {
-  padding: 1rem 1.5rem;
-  font-size: 1rem;
-  color: var(--ran-color-text-secondary);
-  cursor: pointer;
-}
-.wr-menu-result-line:hover {
-  background: var(--ran-color-bg-hover);
-}
-.wr-menu-result-hit {
-  color: var(--ran-color-primary);
-}
-.wr-menu-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-.wr-menu-empty-text {
-  font-size: 1rem;
-  color: var(--ran-color-text-secondary);
-}
-
-/* ---------- DetailOperate ---------- */
-.wr-operate {
-  position: absolute;
-  top: 4rem;
-  right: 5.5rem;
-}
-.wr-operate-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  background: var(--ran-color-bg-elevated);
-  cursor: pointer;
-}
-.wr-operate-mobile {
-  cursor: pointer;
-}
-
-/* ---------- Home（首页 / 书架，单份响应式） ---------- */
+/* ── Home（首页 / 书架）───────────────────────────────────────────────────── */
 .wr-home {
   min-height: 100%;
-  background: var(--ran-color-bg-subtle);
+  background:
+    radial-gradient(
+      130% 60% at 50% -12%,
+      color-mix(in srgb, var(--ran-color-primary) 12%, transparent),
+      transparent 62%
+    ),
+    var(--ran-color-bg-subtle);
 }
-.wr-home-topbar {
+
+/* 品牌字标顶栏 */
+.wr-home-header {
   display: flex;
-  justify-content: flex-end;
-  padding: 1rem 1.5rem 0;
+  align-items: center;
+  justify-content: space-between;
+  max-width: var(--wr-content-width);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 0;
 }
+.wr-home-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.wr-home-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--ran-color-primary), var(--ran-color-primary-active));
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--ran-color-primary) 55%, transparent);
+}
+.wr-home-name {
+  font-size: 1.2rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--ran-color-text);
+}
+.wr-home-tagline {
+  margin-top: 0.05rem;
+  font-size: 0.78rem;
+  color: var(--ran-color-text-secondary);
+}
+
+/* 搜索区 */
 .wr-home-search {
-  padding: 2rem 1rem 0;
+  padding: 2.25rem 1rem 0;
 }
 .wr-home-input {
   display: block;
   width: 50%;
   min-width: 18rem;
   max-width: 40rem;
-  height: 3.25rem;
+  height: 3.4rem;
   margin: 0 auto;
 }
 .wr-home-panel {
   overflow: hidden;
   width: 100%;
   margin-top: 1.5rem;
-  transition: height var(--ran-motion-duration-base, 0.5s) ease;
+  transition: height var(--ran-motion-duration-slow, 0.5s) var(--ran-motion-ease-smooth, ease);
 }
 .wr-home-results {
   height: 100%;
@@ -224,52 +240,62 @@
   width: 50%;
   min-width: 18rem;
   max-width: 40rem;
-  margin: 0 auto 1.5rem;
-  padding: 1.25rem 0;
+  margin: 0 auto 1.25rem;
+  padding: 0.5rem 0 0.75rem;
   background: var(--ran-color-bg-elevated);
-  border-radius: var(--ran-radius-lg, 12px);
+  border: 1px solid var(--ran-color-border);
+  border-radius: var(--ran-radius-lg, 16px);
+  box-shadow: var(--ran-shadow-elevated);
 }
 .wr-home-result-label {
-  padding: 0 1.25rem 0.5rem;
-  font-size: 1rem;
-  font-weight: 500;
+  padding: 0.85rem 1.25rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--ran-color-text-secondary);
 }
 .wr-home-result-row {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  padding: 0.875rem 1.25rem;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
   cursor: pointer;
+  transition: background var(--ran-motion-duration-fast, 0.15s);
 }
 .wr-home-result-row:hover {
   background: var(--ran-color-bg-hover);
 }
 .wr-home-result-cover {
-  width: 4rem;
+  width: 3rem;
   flex: none;
-  border-radius: var(--ran-radius-sm, 4px);
+  border-radius: var(--ran-radius-sm, 6px);
+  box-shadow: var(--ran-shadow-elevated);
 }
 .wr-home-result-meta {
   min-width: 0;
 }
 .wr-home-result-title {
-  font-size: 1.05rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 550;
   color: var(--ran-color-text);
   word-break: break-all;
 }
 .wr-home-result-author {
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
   color: var(--ran-color-text-secondary);
 }
 .wr-home-result-snippet {
-  margin-top: 0.25rem;
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
   color: var(--ran-color-text-secondary);
   word-break: break-all;
 }
 .wr-home-hit {
   color: var(--ran-color-primary);
+  font-weight: 600;
 }
 .wr-home-loading,
 .wr-home-empty {
@@ -279,41 +305,102 @@
   justify-content: center;
   height: 100%;
   color: var(--ran-color-text-secondary);
+  --ran-icon-color: var(--ran-color-border-hover);
 }
 .wr-home-empty-text {
-  margin-top: 0.5rem;
-  font-size: 1.1rem;
+  margin-top: 0.75rem;
+  font-size: 1rem;
 }
+
+/* 书架 */
 .wr-home-shelf {
-  max-width: 72rem;
+  max-width: var(--wr-content-width);
   margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  padding: 2.5rem 1.5rem 4rem;
+}
+.wr-home-shelf-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 .wr-home-shelf-title {
-  font-size: 1.5rem;
-  font-weight: 500;
+  font-size: 1.4rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   color: var(--ran-color-text);
-  margin-bottom: 0.5rem;
+}
+.wr-home-shelf-count {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ran-color-text-secondary);
+  padding: 0.2rem 0.65rem;
+  background: var(--ran-color-bg-muted);
+  border-radius: var(--ran-radius-full, 9999px);
 }
 .wr-home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: 1.5rem;
-  align-items: stretch;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 1.75rem 1.5rem;
+  align-items: start;
 }
+
+/* 书架入场：卡片轻微 fade-up 逐个错峰升起（纯 CSS，尊重 reduced-motion）。 */
+@media (prefers-reduced-motion: no-preference) {
+  .wr-home-grid > * {
+    animation: wr-card-in 0.5s var(--ran-motion-ease-smooth, cubic-bezier(0.4, 0, 0.2, 1)) both;
+  }
+  .wr-home-grid > *:nth-child(1) { animation-delay: 0.02s; }
+  .wr-home-grid > *:nth-child(2) { animation-delay: 0.06s; }
+  .wr-home-grid > *:nth-child(3) { animation-delay: 0.1s; }
+  .wr-home-grid > *:nth-child(4) { animation-delay: 0.14s; }
+  .wr-home-grid > *:nth-child(5) { animation-delay: 0.18s; }
+  .wr-home-grid > *:nth-child(6) { animation-delay: 0.22s; }
+  .wr-home-grid > *:nth-child(7) { animation-delay: 0.26s; }
+  .wr-home-grid > *:nth-child(8) { animation-delay: 0.3s; }
+  .wr-home-grid > *:nth-child(n + 9) { animation-delay: 0.34s; }
+}
+@keyframes wr-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* "+" 幽灵封面（尺寸与书封一致）*/
 .wr-home-add {
+  cursor: pointer;
+}
+.wr-home-add-inner {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 10rem;
-  background: var(--ran-color-bg-elevated);
-  border-radius: var(--ran-radius-lg, 12px);
-  cursor: pointer;
-  transition: transform var(--ran-motion-duration-base, 0.2s);
-  --ran-icon-color: var(--ran-color-border);
+  gap: 0.5rem;
+  aspect-ratio: var(--wr-cover-aspect);
+  border-radius: var(--wr-cover-radius);
+  border: 1.5px dashed var(--ran-color-border-hover);
+  background: color-mix(in srgb, var(--ran-color-bg-elevated) 60%, transparent);
+  color: var(--ran-color-text-secondary);
+  --ran-icon-color: var(--ran-color-border-hover);
+  transition:
+    transform var(--ran-motion-duration-slow, 0.35s) var(--wr-ease-spring),
+    border-color var(--ran-motion-duration-base, 0.2s),
+    color var(--ran-motion-duration-base, 0.2s);
 }
-.wr-home-add:hover {
-  transform: scale(1.05);
+.wr-home-add-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.wr-home-add:hover .wr-home-add-inner {
+  transform: translateY(-6px);
+  border-color: var(--ran-color-primary);
+  color: var(--ran-color-primary);
+  --ran-icon-color: var(--ran-color-primary);
 }
 
 @media (max-width: 768px) {
@@ -326,18 +413,173 @@
     min-width: 0;
   }
   .wr-home-grid {
-    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-    gap: 1rem;
-  }
-  .wr-home-add {
-    height: 9rem;
+    grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+    gap: 1.25rem 1rem;
   }
 }
 
-/* ---------- Book detail（阅读页） ---------- */
+/* ── Catalogue（目录）─────────────────────────────────────────────────────── */
+.wr-catalogue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+.wr-catalogue-header {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--ran-space-4, 1rem);
+  padding: 1.25rem 1.75rem 0.75rem;
+}
+.wr-catalogue-cover {
+  width: 3.5rem;
+  border-radius: var(--ran-radius-sm, 6px);
+  box-shadow: var(--ran-shadow-elevated);
+}
+.wr-catalogue-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ran-color-text);
+  word-break: break-all;
+}
+.wr-catalogue-author {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--ran-color-text-secondary);
+  word-break: break-all;
+}
+.wr-catalogue-sort {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: none;
+  padding: 0 2.25rem;
+  height: 2.5rem;
+  --ran-icon-color: var(--ran-color-text-secondary);
+}
+.wr-catalogue-sort-icon {
+  cursor: pointer;
+  transition: transform var(--ran-motion-duration-base, 0.2s);
+}
+.wr-catalogue-sort-icon.UP {
+  transform: rotate(180deg);
+}
+.wr-catalogue-list {
+  flex: auto;
+  overflow-y: auto;
+}
+.wr-catalogue-item {
+  padding: 0 1.75rem;
+  height: 3rem;
+  font-size: 0.95rem;
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+  transition: color var(--ran-motion-duration-fast, 0.15s);
+}
+.wr-catalogue-item:hover {
+  background: var(--ran-color-bg-hover);
+  color: var(--ran-color-text);
+}
+.wr-catalogue-item-inner {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  border-top: 1px solid var(--ran-color-border-secondary);
+}
+
+/* ── DetailMenu（搜索菜单）───────────────────────────────────────────────── */
+.wr-menu {
+  display: flex;
+  flex-direction: column;
+  width: 28rem;
+  max-width: 90vw;
+  height: calc(100vh - 8rem);
+}
+.wr-menu-search {
+  flex: none;
+  padding: 1.5rem 1.5rem 1rem;
+}
+.wr-menu-result {
+  flex: auto;
+  overflow-y: auto;
+  padding-bottom: 1.75rem;
+}
+.wr-menu-result-title {
+  padding: 0.75rem 1.5rem 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ran-color-text-secondary);
+}
+.wr-menu-result-line {
+  padding: 0.85rem 1.5rem;
+  font-size: 0.95rem;
+  color: var(--ran-color-text-secondary);
+  cursor: pointer;
+  transition: background var(--ran-motion-duration-fast, 0.15s);
+}
+.wr-menu-result-line:hover {
+  background: var(--ran-color-bg-hover);
+  color: var(--ran-color-text);
+}
+.wr-menu-result-hit {
+  color: var(--ran-color-primary);
+  font-weight: 600;
+}
+.wr-menu-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  --ran-icon-color: var(--ran-color-border-hover);
+}
+.wr-menu-empty-text {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: var(--ran-color-text-secondary);
+}
+
+/* ── DetailOperate（详情操作按钮）────────────────────────────────────────── */
+.wr-operate {
+  position: absolute;
+  top: 4rem;
+  right: 5.5rem;
+}
+.wr-operate-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: var(--ran-color-bg-elevated);
+  border: 1px solid var(--ran-color-border);
+  box-shadow: var(--ran-shadow-elevated);
+  cursor: pointer;
+  --ran-icon-color: var(--ran-color-text-secondary);
+  transition:
+    transform var(--ran-motion-duration-base, 0.2s),
+    box-shadow var(--ran-motion-duration-base, 0.2s);
+}
+.wr-operate-trigger:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--ran-shadow-menu);
+  --ran-icon-color: var(--ran-color-text);
+}
+.wr-operate-mobile {
+  cursor: pointer;
+}
+
+/* ── Book detail（阅读页）─────────────────────────────────────────────────── */
 .wr-reader {
   height: 100vh;
-  background: var(--ran-color-bg);
+  background: var(--ran-color-bg-subtle);
 }
 .wr-rot-90 {
   transform: rotate(90deg);
@@ -349,38 +591,50 @@
 /* 桌面：双列 */
 .wr-reader-desktop {
   position: relative;
-  padding: 0 clamp(1.5rem, 8vw, 11rem);
+  padding: 0 clamp(1.5rem, 6vw, 8rem);
 }
 .wr-reader-inner {
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-width: 78rem;
+  margin: 0 auto;
 }
 .wr-reader-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex: none;
-  height: 4rem;
+  height: 4.25rem;
 }
 .wr-reader-book-title {
-  font-weight: 500;
-  color: var(--ran-color-text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ran-color-text);
   cursor: pointer;
 }
 .wr-reader-book-title:hover {
-  color: var(--ran-color-text);
+  color: var(--ran-color-primary);
 }
 .wr-reader-topbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 .wr-reader-home {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--ran-color-text-secondary);
+  border-radius: var(--ran-radius-full, 9999px);
   cursor: pointer;
+  transition:
+    background var(--ran-motion-duration-base, 0.2s),
+    color var(--ran-motion-duration-base, 0.2s);
 }
 .wr-reader-home:hover {
+  background: var(--ran-color-bg-hover);
   color: var(--ran-color-text);
 }
 .wr-reader-enhance {
@@ -389,9 +643,19 @@
   gap: 0.75rem;
 }
 .wr-reader-enhance-link {
-  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.95rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--ran-color-primary);
+  background: color-mix(in srgb, var(--ran-color-primary) 12%, transparent);
+  border-radius: var(--ran-radius-full, 9999px);
   cursor: pointer;
+  transition: background var(--ran-motion-duration-base, 0.2s);
+}
+.wr-reader-enhance-link:hover {
+  background: color-mix(in srgb, var(--ran-color-primary) 20%, transparent);
 }
 .wr-reader-progress {
   display: flex;
@@ -406,18 +670,27 @@
   color: var(--ran-color-text-secondary);
   white-space: nowrap;
 }
+
+/* 阅读纸面 */
 .wr-reader-book {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 1.75rem 4rem 0;
+  margin-bottom: 0.5rem;
+  padding: 2.25rem clamp(2rem, 5vw, 4.5rem) 0.5rem;
   background: var(--ran-color-bg-elevated);
+  border: 1px solid var(--ran-color-border);
   border-radius: var(--ran-radius-lg, 16px);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 24px 48px -28px rgba(0, 0, 0, 0.32);
 }
 .wr-reader-chapter {
-  font-size: 0.875rem;
-  font-weight: 300;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ran-color-text-secondary);
 }
 .wr-reader-columns {
@@ -426,14 +699,15 @@
   justify-content: space-between;
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: 1.25rem;
-  font-size: 1.125rem;
-  line-height: 2.25rem;
-  letter-spacing: 0.02em;
+  margin-top: 1.5rem;
+  font-family: var(--wr-serif);
+  font-size: 1.16rem;
+  line-height: 2.2rem;
+  letter-spacing: 0.01em;
   color: var(--ran-color-text);
 }
 .wr-reader-col {
-  width: 44%;
+  width: 45%;
   height: 100%;
   overflow: hidden;
   word-break: break-word;
@@ -449,24 +723,35 @@
 .wr-reader-nav-btn {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  height: 2rem;
-  padding: 0 0.75rem;
-  font-size: 0.875rem;
+  gap: 0.35rem;
+  height: 2.4rem;
+  padding: 0 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--ran-color-text-secondary);
+  background: var(--ran-color-bg-elevated);
   border: 1px solid var(--ran-color-border);
   border-radius: 9999px;
+  box-shadow: var(--ran-shadow-elevated);
   cursor: pointer;
+  --ran-icon-color: var(--ran-color-text-secondary);
+  transition:
+    transform var(--ran-motion-duration-base, 0.2s),
+    color var(--ran-motion-duration-base, 0.2s),
+    box-shadow var(--ran-motion-duration-base, 0.2s);
 }
 .wr-reader-nav-btn:hover {
-  background: var(--ran-color-bg-hover);
+  transform: translateY(-1px);
+  color: var(--ran-color-text);
+  box-shadow: var(--ran-shadow-menu);
+  --ran-icon-color: var(--ran-color-text);
 }
 
 /* 移动：单列 + chrome 栏 */
 .wr-reader-mobile-inner {
   position: relative;
   height: 100%;
-  padding: 2rem;
+  padding: 2rem 1.75rem;
 }
 .wr-reader-chrome {
   position: absolute;
@@ -479,6 +764,8 @@
   padding: 0 1rem;
   overflow: hidden;
   background: var(--ran-color-bg-elevated);
+  box-shadow: var(--ran-shadow-elevated);
+  --ran-icon-color: var(--ran-color-text-secondary);
   transition: height var(--ran-motion-duration-base, 0.3s) ease;
 }
 .wr-reader-chrome-top {
@@ -490,16 +777,21 @@
 .wr-reader-mobile-text {
   width: 100%;
   height: 100%;
-  font-size: 1.125rem;
-  line-height: 2.25rem;
+  font-family: var(--wr-serif);
+  font-size: 1.16rem;
+  line-height: 2.2rem;
+  letter-spacing: 0.01em;
   white-space: pre-wrap;
   color: var(--ran-color-text);
 }
 .wr-reader-page-indicator {
   position: absolute;
-  right: 2rem;
-  bottom: 2rem;
+  right: 1.75rem;
+  bottom: 1.5rem;
   z-index: 10;
-  font-size: 1rem;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.8rem;
   color: var(--ran-color-text-secondary);
+  background: color-mix(in srgb, var(--ran-color-bg-elevated) 80%, transparent);
+  border-radius: var(--ran-radius-full, 9999px);
 }
